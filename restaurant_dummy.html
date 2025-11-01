@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Gemini Diner - Classic Comfort, Stellar Food</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Load Roboto & Roboto Slab fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 3. Custom styles and Tailwind configuration -->
+    <style>
+      /* Apply the new fonts */
+      body {
+        font-family: 'Roboto', sans-serif;
+      }
+      
+      .font-heading {
+        font-family: 'Roboto Slab', serif;
+      }
+      
+      /* Simple smooth scroll for anchor links */
+      html {
+        scroll-behavior: smooth;
+      }
+    </style>
+    <script>
+      /* Custom Tailwind theme for The Gemini Diner */
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              // "Gemini" theme: Indigo (night sky) & Yellow (stars)
+              primary: tailwind.colors.indigo,
+              secondary: tailwind.colors.yellow,
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- ========== HEADER ========== -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-20">
+          
+          <!-- Logo / Brand Name -->
+          <a href="#home" class="text-3xl font-extrabold text-primary-700 font-heading">
+            The Gemini Diner
+          </a>
+          
+          <!-- Desktop Navigation -->
+          <div class="hidden md:flex space-x-8">
+            <a href="#home" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Home</a>
+            <a href="#menu" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Menu</a>
+            <a href="#gallery" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Gallery</a>
+            <a href="#contact" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Contact</a>
+          </div>
+          
+          <!-- Mobile Menu Button -->
+          <div class="md:hidden">
+            <button id="mobile-menu-button" class="text-gray-700 hover:text-primary-600 focus:outline-none">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+              </svg>
+            </button>
+          </div>
+          
+        </div>
+      </nav>
+      
+      <!-- Mobile Menu (hidden by default) -->
+      <div id="mobile-menu" class="md:hidden hidden pb-4">
+        <a href="#home" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Home</a>
+        <a href="#menu" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Menu</a>
+        <a href="#gallery" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Gallery</a>
+        <a href="#contact" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Contact</a>
+      </div>
+    </header>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main>
+
+      <!-- 1. Hero Section -->
+      <section id="home" class="relative h-[60vh] md:h-[calc(100vh-80px)] min-h-[400px]">
+        <!-- Background Image -->
+        <div class="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1667388969250-1c7220bf3f37?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=910" 
+               alt="The beautiful interior of The Gemini Diner" 
+               onerror="this.src='https://placehold.co/1600x900/1E3A8A/FDE047?text=The+Gemini+Diner'"
+               class="w-full h-full object-cover">
+          <!-- Dark overlay for better text contrast -->
+          <div class="absolute inset-0 bg-black/60"></div>
+        </div>
+        
+        <!-- Hero Text -->
+        <div class="relative z-10 flex flex-col justify-center items-center h-full text-center text-white px-4">
+          <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight font-heading">
+            Welcome to <span class="text-secondary-400">The Gemini Diner</span>
+          </h1>
+          <p class="mt-4 text-xl md:text-2xl max-w-2xl">
+            Classic comfort food with a cosmic twist.
+          </p>
+          <a href="#menu" class="mt-10 px-8 py-3 bg-primary-600 text-white text-lg font-semibold rounded-lg shadow-lg hover:bg-primary-700 transition duration-300">
+            Explore Our Menu
+          </a>
+        </div>
+      </section>
+
+      <!-- 2. About / Welcome Blurb -->
+      <section id="about" class="py-20 md:py-28">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+          <h2 class="text-4xl font-extrabold text-primary-700 sm:text-5xl font-heading">
+            Downtown's Coziest Corner
+          </h2>
+          <p class="mt-6 text-xl text-gray-700 leading-relaxed">
+            Located at 123 Culinary Drive right next to City Park, The Gemini Diner is your new go-to for breakfast, lunch, and dinner. We're serving up all your favorites, from hearty burgers to fresh salads and stellar desserts.
+          </p>
+        </div>
+      </section>
+
+      <!-- 3. Menu Highlights -->
+      <section id="menu" class="py-20 md:py-28 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+          <h2 class="text-4xl font-extrabold text-center mb-16 text-gray-900 font-heading">
+            Our Most Popular Dishes
+          </h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <!-- Menu Item 1: From Restaurant_data.docx & Menu PDF -->
+            <div class="bg-gray-50 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
+              <img src="https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg" 
+                   alt="A plate of Stellar Stuffed Chicken" 
+                   onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'"
+                   class="w-full h-56 object-cover">
+              <div class="p-6">
+                <h3 class="text-2xl font-bold text-primary-700 font-heading">Stellar Stuffed Chicken</h3>
+                <p class="mt-3 text-gray-600">
+                  Our most popular dish! Chicken breast stuffed with spinach and feta, served with rosemary potatoes.
+                </p>
+              </div>
+            </div>
+            
+            <!-- Menu Item 2: From Menu PDF -->
+            <div class="bg-gray-50 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
+              <img src="https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg" 
+                   alt="A delicious Classic Gemini Burger" 
+                   onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'"
+                   class="w-full h-56 object-cover">
+              <div class="p-6">
+                <h3 class="text-2xl font-bold text-primary-700 font-heading">Classic Gemini Burger</h3>
+                <p class="mt-3 text-gray-600">
+                  A half-pound beef patty with all the classic fixings. A true diner legend.
+                </p>
+              </div>
+            </div>
+            
+            <!-- Menu Item 3: From Menu PDF -->
+            <div class="bg-gray-50 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
+              <img src="https://images.pexels.com/photos/1199960/pexels-photo-1199960.jpeg" 
+                   alt="A plate of the Black Hole Veggie Burger" 
+                   onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'"
+                   class="w-full h-56 object-cover">
+              <div class="p-6">
+                <h3 class="text-2xl font-bold text-primary-700 font-heading">Black Hole Veggie Burger</h3>
+                <p class="mt-3 text-gray-600">
+                  Our house-made patty of black beans and quinoa. A stellar vegetarian option!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Image Gallery -->
+      <section id="gallery" class="py-20 md:py-28 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4">
+          <h2 class="text-4xl font-extrabold text-center mb-16 text-gray-900 font-heading">
+            Vibes at The Gemini
+          </h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Images will be in a masonry-style grid -->
+            <div class="grid gap-4">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x700/1E3A8A/FFFFFF?text=Chocolate+Comet+Cake" alt="A slice of Chocolate Comet Cake" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x400/1E3A8A/FFFFFF?text=Nebula+Nachos" alt="A plate of Nebula Nachos" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+            </div>
+            <div class="grid gap-4">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x500/FACC15/FFFFFF?text=Milky+Way+Milkshake" alt="A Milky Way Milkshake" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x800/1E3A8A/FFFFFF?text=Outdoor+Patio" alt="The sunny outdoor patio" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+            </div>
+             <div class="grid gap-4">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x700/FACC15/FFFFFF?text=Smiling+Staff" alt="A smiling barista" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x400/1E3A8A/FFFFFF?text=Rocket+Wings" alt="A basket of Rocket Wings" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+            </div>
+            <div class="grid gap-4">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x500/1E3A8A/FFFFFF?text=Gemini+Neon+Sign" alt="The Gemini Diner neon sign at night" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x800/FACC15/FFFFFF?text=Cozy+Booth" alt="A cozy diner booth" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Contact & Location -->
+      <section id="contact" class="py-20 md:py-28 bg-gray-900 text-white">
+        <div class="max-w-7xl mx-auto px-4">
+          <h2 class="text-4xl font-extrabold text-center mb-12 font-heading text-white">
+            Come On In!
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-12 text-center">
+            
+            <!-- Opening Hours (from Restaurant_data.docx) -->
+            <div>
+              <h3 class="text-3xl font-bold mb-6 text-secondary-400 font-heading">Opening Hours</h3>
+              <div class="space-y-3 text-lg">
+                <p>Tues - Sun: <span class="font-medium ml-2">11:00 AM - 10:00 PM</span></p>
+                <p>Monday: <span class="font-medium ml-2">Closed</span></p>
+              </div>
+            </div>
+            
+            <!-- Location & Contact (from Restaurant_data.docx) -->
+            <div>
+              <h3 class="text-3xl font-bold mb-6 text-secondary-400 font-heading">Location & Contact</h3>
+              <div class="space-y-3 text-lg">
+                <p>123 Culinary Drive, Downtown Metro City, 54321</p>
+                <p>(123) 456-7890</p>
+                <p>catering@geminidiner.com</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+    
+    <!-- ========== FOOTER ========== -->
+    <footer class="bg-gray-900 text-gray-400 py-10">
+      <div class="max-w-7xl mx-auto px-4 text-center">
+        <p>&copy; 2025 The Gemini Diner. All rights reserved.</p>
+        <p class="mt-2 text-sm">A cosmic diner website built with &hearts;.</p>
+      </div>
+    </footer>
+
+
+    <!-- ========== JAVASCRIPT ========== -->
+    <script>
+      const menuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+
+      // Toggle mobile menu
+      menuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+
+      // Close mobile menu when a link is clicked
+      const menuLinks = mobileMenu.querySelectorAll('a');
+      menuLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          mobileMenu.classList.add('hidden');
+        });
+      });
+    </script>
+</body>
+</html>
+
+
+
