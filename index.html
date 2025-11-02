@@ -6,6 +6,8 @@
     <title>The Gemini Diner - Classic Comfort, Stellar Food</title>
     <!-- 1. Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/index.umd.js"></script>
     
     <!-- 2. Load Roboto & Roboto Slab fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -187,20 +189,20 @@
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <!-- Images will be in a masonry-style grid -->
             <div class="grid gap-4">
-              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x700/1E3A8A/FFFFFF?text=Chocolate+Comet+Cake" alt="A slice of Chocolate Comet Cake" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="imgs\pexels-gabriel-gotti-559641432-16777905.jpg" alt="A slice of Chocolate Comet Cake" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
               <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x400/1E3A8A/FFFFFF?text=Nebula+Nachos" alt="A plate of Nebula Nachos" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
             </div>
             <div class="grid gap-4">
               <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x500/FACC15/FFFFFF?text=Milky+Way+Milkshake" alt="A Milky Way Milkshake" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
-              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x800/1E3A8A/FFFFFF?text=Outdoor+Patio" alt="The sunny outdoor patio" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="imgs\pexels-ecem-2157084294-34533076.jpg" alt="The sunny outdoor patio" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
             </div>
              <div class="grid gap-4">
-              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x700/FACC15/FFFFFF?text=Smiling+Staff" alt="A smiling barista" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="imgs\pexels-tim-douglas-6205544.jpg" alt="A smiling barista" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
               <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x400/1E3A8A/FFFFFF?text=Rocket+Wings" alt="A basket of Rocket Wings" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
             </div>
             <div class="grid gap-4">
               <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x500/1E3A8A/FFFFFF?text=Gemini+Neon+Sign" alt="The Gemini Diner neon sign at night" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
-              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x800/FACC15/FFFFFF?text=Cozy+Booth" alt="A cozy diner booth" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+              <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="imgs\pexels-annaelle-quionquion-2652658-16811720.jpg" alt="A cozy diner booth" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
             </div>
           </div>
         </div>
@@ -246,6 +248,7 @@
         <p class="mt-2 text-sm">A cosmic diner website built with &hearts;.</p>
       </div>
     </footer>
+  
 
 
     <!-- ========== JAVASCRIPT ========== -->
@@ -266,7 +269,22 @@
         });
       });
     </script>
-</body>
+    
+      <div id="n8n-chat" class="w-full h-96 border-t-2"></div>
+
+    <script>
+      window.n8nChat.init({
+        chatOptions: {
+          webhookUrl: "https://ai41.app.n8n.cloud/webhook/e9a8c3c6-8684-4795-b462-9d38bafb97a4/chat",
+          title: "My AI Helpdesk",
+          
+          // These are the new lines that force it to appear in your div
+          mode: 'inline',
+          element: document.getElementById('n8n-chat')
+        }
+      });
+    </script>
+  </body>
 </html>
 
 
