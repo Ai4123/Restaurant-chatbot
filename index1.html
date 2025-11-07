@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Gemini Diner - Classic Comfort, Stellar Food</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Load Roboto & Roboto Slab fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 3. Load Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 4. Custom styles and Tailwind configuration -->
+    <style>
+      /* Apply the new fonts */
+      body {
+        font-family: 'Roboto', sans-serif;
+      }
+      .font-heading {
+        font-family: 'Roboto Slab', serif;
+      }
+      /* Simple smooth scroll for anchor links */
+      html {
+        scroll-behavior: smooth;
+      }
+      /* --- Chatbot Custom Styles --- */
+      #messages-container {
+          overflow-y: scroll !important;
+          overflow-x: hidden !important;
+          scrollbar-width: auto !important;
+          scrollbar-color: #d1d5db #4b5563 !important;
+          /* Force scrollbar to always be visible */
+          -ms-overflow-style: scrollbar !important;
+          height: 100% !important;
+          max-height: 100% !important;
+          position: relative !important;
+      }
+      /* Loading animation for typing indicator */
+      @keyframes typing-bounce {
+          0%, 60%, 100% {
+              transform: translateY(0);
+              opacity: 0.7;
+          }
+          30% {
+              transform: translateY(-10px);
+              opacity: 1;
+          }
+      }
+      #loading-message .animate-bounce {
+          animation: typing-bounce 1.4s ease-in-out infinite;
+      }
+      #messages-container::-webkit-scrollbar {
+          width: 16px !important;
+          display: block !important;
+          -webkit-appearance: none !important;
+          background-color: #4b5563 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+      }
+      #messages-container::-webkit-scrollbar-track {
+          background: #4b5563 !important;
+          border-radius: 8px !important;
+          margin: 4px !important;
+          border: 1px solid #6b7280 !important;
+          box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3) !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+      }
+      #messages-container::-webkit-scrollbar-thumb {
+          background: #f3f4f6 !important;
+          border-radius: 8px !important;
+          border: 2px solid #4b5563 !important;
+          min-height: 50px !important;
+          box-shadow: 0 0 8px rgba(255, 255, 255, 0.4), inset 0 0 4px rgba(255, 255, 255, 0.2) !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+      }
+      #messages-container::-webkit-scrollbar-thumb:hover {
+          background: #f9fafb !important;
+          border-color: #6b7280 !important;
+          box-shadow: 0 0 8px rgba(255, 255, 255, 0.5) !important;
+      }
+      #messages-container::-webkit-scrollbar-thumb:active {
+          background: #ffffff !important;
+      }
+      #messages-container::-webkit-scrollbar-corner {
+          background: #4b5563 !important;
+      }
+      #session-list {
+          scrollbar-width: thin;
+          scrollbar-color: #4b5563 #374151;
+      }
+      #session-list::-webkit-scrollbar {
+          width: 6px;
+      }
+      #session-list::-webkit-scrollbar-track {
+          background: #374151;
+      }
+      #session-list::-webkit-scrollbar-thumb {
+          background: #4b5563;
+          border-radius: 3px;
+      }
+      #session-list::-webkit-scrollbar-thumb:hover {
+          background: #6b7280;
+      }
+    </style>
+    <script>
+      /* Custom Tailwind theme for The Gemini Diner */
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              // "Gemini" theme: Indigo (night sky) & Yellow (stars)
+              primary: tailwind.colors.indigo,
+              secondary: tailwind.colors.yellow,
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- ========== HEADER ========== -->
+    <header class="bg-white shadow-md sticky top-0 z-40"> <!-- z-40 to be below chat popup -->
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-20">
+          <!-- Logo / Brand Name -->
+          <a href="#home" class="text-3xl font-extrabold text-primary-700 font-heading">
+            The Gemini Diner
+          </a>
+          <!-- Desktop Navigation -->
+          <div class="hidden md:flex space-x-8">
+            <a href="#home" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Home</a>
+            <a href="#menu" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Menu</a>
+            <a href="#gallery" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Gallery</a>
+            <a href="#contact" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Contact</a>
+          </div>
+          <!-- Mobile Menu Button -->
+          <div class="md:hidden">
+            <button id="mobile-menu-button" class="text-gray-700 hover:text-primary-600 focus:outline-none">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </nav>
+      <!-- Mobile Menu (hidden by default) -->
+      <div id="mobile-menu" class="md:hidden hidden pb-4">
+        <a href="#home" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Home</a>
+        <a href="#menu" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Menu</a>
+        <a href="#gallery" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Gallery</a>
+        <a href="#contact" class="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-primary-600">Contact</a>
+      </div>
+    </header>
+    <!-- ========== MAIN CONTENT ========== -->
+    <main>
+        <!-- Diner Content Sections (Hero, About, Menu, etc.) -->
+        <!-- 1. Hero Section -->
+        <section id="home" class="relative h-[60vh] md:h-[calc(100vh-80px)] min-h-[400px]">
+            <!-- Background Image -->
+            <div class="absolute inset-0">
+            <img src="https://images.unsplash.com/photo-1667388969250-1c7220bf3f37?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=910"
+                alt="The beautiful interior of The Gemini Diner"
+                onerror="this.src='https://placehold.co/1600x900/1E3A8A/FDE047?text=The+Gemini+Diner'"
+                class="w-full h-full object-cover">
+            <!-- Dark overlay for better text contrast -->
+            <div class="absolute inset-0 bg-black/60"></div>
+            </div>
+            <!-- Hero Text -->
+            <div class="relative z-10 flex flex-col justify-center items-center h-full text-center text-white px-4">
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight font-heading">
+                Welcome to <span class="text-secondary-400">The Gemini Diner</span>
+            </h1>
+            <p class="mt-4 text-xl md:text-2xl max-w-2xl">
+                Classic comfort food with a cosmic twist.
+            </p>
+            <a href="#menu" class="mt-10 px-8 py-3 bg-primary-600 text-white text-lg font-semibold rounded-lg shadow-lg hover:bg-primary-700 transition duration-300">
+                Explore Our Menu
+            </a>
+            </div>
+        </section>
+        <!-- 2. About / Welcome Blurb -->
+        <section id="about" class="py-20 md:py-28">
+            <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-4xl font-extrabold text-primary-700 sm:text-5xl font-heading">
+                Downtown's Coziest Corner
+            </h2>
+            <p class="mt-6 text-xl text-gray-700 leading-relaxed">
+                Located at 123 Culinary Drive right next to City Park, The Gemini Diner is your new go-to for breakfast, lunch, and dinner. We're serving up all your favorites, from hearty burgers to fresh salads and stellar desserts.
+            </p>
+            </div>
+        </section>
+        <!-- 3. Menu Highlights -->
+        <section id="menu" class="py-20 md:py-28 bg-white">
+            <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl font-extrabold text-center mb-16 text-gray-900 font-heading">
+                Our Most Popular Dishes
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <!-- Menu Item 1: From Restaurant_data.docx & Menu PDF -->
+                <div class="bg-gray-50 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
+                <img src="https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg"
+                    alt="A plate of Stellar Stuffed Chicken"
+                    onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'"
+                    class="w-full h-56 object-cover">
+                <div class="p-6">
+                    <h3 class="text-2xl font-bold text-primary-700 font-heading">Stellar Stuffed Chicken</h3>
+                    <p class="mt-3 text-gray-600">
+                    Our most popular dish! Chicken breast stuffed with spinach and feta, served with rosemary potatoes.
+                    </p>
+                </div>
+                </div>
+                <!-- Menu Item 2: From Menu PDF -->
+                <div class="bg-gray-50 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
+                <img src="https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg"
+                    alt="A delicious Classic Gemini Burger"
+                    onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'"
+                    class="w-full h-56 object-cover">
+                <div class="p-6">
+                    <h3 class="text-2xl font-bold text-primary-700 font-heading">Classic Gemini Burger</h3>
+                    <p class="mt-3 text-gray-600">
+                    A half-pound beef patty with all the classic fixings. A true diner legend.
+                    </p>
+                </div>
+                </div>
+                <!-- Menu Item 3: From Menu PDF -->
+                <div class="bg-gray-50 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
+                <img src="https://images.pexels.com/photos/1199960/pexels-photo-1199960.jpeg"
+                    alt="A plate of the Black Hole Veggie Burger"
+                    onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'"
+                    class="w-full h-56 object-cover">
+                <div class="p-6">
+                    <h3 class="text-2xl font-bold text-primary-700 font-heading">Black Hole Veggie Burger</h3>
+                    <p class="mt-3 text-gray-600">
+                    Our house-made patty of black beans and quinoa. A stellar vegetarian option!
+                    </p>
+                </div>
+                </div>
+            </div>
+            </div>
+        </section>
+        <!-- 4. Image Gallery -->
+        <section id="gallery" class="py-20 md:py-28 bg-gray-50">
+            <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl font-extrabold text-center mb-16 text-gray-900 font-heading">
+                Vibes at The Gemini
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Images will be in a masonry-style grid -->
+                <div class="grid gap-4">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x700/1E3A8A/FFFFFF?text=Chocolate+Comet+Cake" alt="A slice of Chocolate Comet Cake" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x400/1E3A8A/FFFFFF?text=Nebula+Nachos" alt="A plate of Nebula Nachos" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                </div>
+                <div class="grid gap-4">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x500/FACC15/FFFFFF?text=Milky+Way+Milkshake" alt="A Milky Way Milkshake" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x800/1E3A8A/FFFFFF?text=Outdoor+Patio" alt="The sunny outdoor patio" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                </div>
+                <div class="grid gap-4">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x700/FACC15/FFFFFF?text=Smiling+Staff" alt="A smiling barista" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x400/1E3A8A/FFFFFF?text=Rocket+Wings" alt="A basket of Rocket Wings" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                </div>
+                <div class="grid gap-4">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x500/1E3A8A/FFFFFF?text=Gemini+Neon+Sign" alt="The Gemini Diner neon sign at night" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                <img class="h-auto max-w-full rounded-lg shadow-md transition-transform duration-300 hover:scale-105" src="https://placehold.co/500x800/FACC15/FFFFFF?text=Cozy+Booth" alt="A cozy diner booth" onerror="this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Available'">
+                </div>
+            </div>
+            </div>
+        </section>
+        <!-- 5. Contact & Location -->
+        <section id="contact" class="py-20 md:py-28 bg-gray-900 text-white">
+            <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl font-extrabold text-center mb-12 font-heading text-white">
+                Come On In!
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 text-center">
+                <!-- Opening Hours (from Restaurant_data.docx) -->
+                <div>
+                <h3 class="text-3xl font-bold mb-6 text-secondary-400 font-heading">Opening Hours</h3>
+                <div class="space-y-3 text-lg">
+                    <p>Tues - Sun: <span class="font-medium ml-2">11:00 AM - 10:00 PM</span></p>
+                    <p>Monday: <span class="font-medium ml-2">Closed</span></p>
+                </div>
+                </div>
+                <!-- Location & Contact (from Restaurant_data.docx) -->
+                <div>
+                <h3 class="text-3xl font-bold mb-6 text-secondary-400 font-heading">Location & Contact</h3>
+                <div class="space-y-3 text-lg">
+                    <p>123 Culinary Drive, Downtown Metro City, 54321</p>
+                    <p>(123) 456-7890</p>
+                    <p>catering@geminidiner.com</p>
+                </div>
+                </div>
+            </div>
+            </div>
+        </section>
+    </main>
+    <!-- ========== FOOTER ========== -->
+    <footer class="bg-gray-900 text-gray-400 py-10">
+      <div class="max-w-7xl mx-auto px-4 text-center">
+        <p>&copy; 2025 The Gemini Diner. All rights reserved.</p>
+        <p class="mt-2 text-sm">A cosmic diner website built with &hearts;.</p>
+      </div>
+    </footer>
+    <!-- ========== CHATBOT UI ========== -->
+    <!-- 1. Chat Toggle Bubble -->
+    <button id="chat-toggle-bubble" class="fixed bottom-6 right-6 bg-primary-600 hover:bg-primary-700 text-white p-4 rounded-full shadow-lg z-50 transition-transform duration-200 hover:scale-110">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+    </button>
+    <!-- 2. Main Chat Popup Container -->
+    <!-- Added text-gray-100 and font-sans to reset context from main page -->
+    <div id="chat-popup" class="fixed bottom-24 right-6 w-full max-w-md h-[70vh] bg-gray-900 text-gray-100 font-sans rounded-lg shadow-2xl z-50 hidden flex-col overflow-hidden">
+        <!-- Relative container for overlay and toast -->
+        <div class="relative h-full flex flex-col">
+            <!-- Loading Spinner Overlay (now absolute) -->
+            <div id="loading-overlay" class="absolute inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+                <svg class="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <!-- Error Toast (now absolute) -->
+            <div id="error-toast" class="absolute bottom-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50 hidden transition-opacity duration-300">
+                <span id="error-message"></span>
+            </div>
+            <!-- 2a. Auth Container (Login/Signup) -->
+            <div id="auth-container" class="h-full flex items-center justify-center">
+                <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-sm">
+                    <h2 class="text-2xl font-bold text-center mb-6">Chatbot Login</h2>
+                    <form id="auth-form" class="space-y-4">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-300">Email</label>
+                            <input type="email" id="auth-email" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-300">Password</label>
+                            <input type="password" id="auth-password" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" minlength="6">
+                        </div>
+                        <div class="flex space-x-2">
+                            <button type="submit" id="login-button" class="flex-1 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">Login</button>
+                            <button type="button" id="signup-button" class="flex-1 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">Sign Up</button>
+                        </div>
+                    </form>
+                    <button type="button" class="chat-close-button text-center text-sm text-gray-400 mt-4 w-full hover:text-blue-400">&larr; Close Chat</button>
+                </div>
+            </div>
+            <!-- 2b. Chat Container (Shown when logged in) -->
+            <div id="chat-container" class="flex h-full flex-col hidden">
+                <!-- Main Chat Area -->
+                <div class="w-full flex-1 flex flex-col bg-gray-900" style="min-height: 0; overflow: hidden;">
+                    <!-- Header with Dropdown -->
+                    <div class="p-4 border-b border-gray-700 bg-gray-800">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-lg font-semibold text-white">Gemini Diner AI</h2>
+                            <div class="flex items-center space-x-2">
+                                <button id="new-chat-button" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-1.5 px-3 rounded-md transition duration-200 flex items-center space-x-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    <span>New Chat</span>
+                                </button>
+                                <button id="signout-button" class="text-gray-400 hover:text-white p-1.5" title="Sign Out">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Chat History Dropdown -->
+                        <div class="relative">
+                            <button id="history-dropdown-button" class="w-full bg-gray-700 hover:bg-gray-600 text-white text-left px-4 py-2.5 rounded-lg transition duration-200 flex items-center justify-between">
+                                <span id="selected-chat-display" class="text-sm font-medium truncate">Select a chat or start new...</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 transition-transform duration-200" id="dropdown-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown Menu -->
+                            <div id="history-dropdown-menu" class="hidden absolute z-50 w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-64 overflow-hidden">
+                                <div class="overflow-y-auto max-h-60" id="session-list">
+                                    <!-- Session items will be injected here by JS -->
+                                </div>
+                                <div class="border-t border-gray-700 p-2">
+                                    <button id="delete-all-button" class="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2 px-3 rounded-md transition duration-200 flex items-center justify-center space-x-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        <span>Delete All Chats</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-400">
+                            <span id="user-email" class="truncate" title="User Email"></span>
+                        </div>
+                    </div>
+                    <!-- Messages Container -->
+                    <div id="messages-container" class="flex-1 p-6 space-y-4 min-h-0" style="overflow-y: scroll !important; max-height: calc(70vh - 200px);">
+                        <!-- Chat messages will be injected here by JS -->
+                        <div class="w-full h-full flex items-center justify-center text-gray-500">
+                            <p>Select a chat or start a new one.</p>
+                        </div>
+                    </div>
+                    <!-- Input Form -->
+                    <div class="p-4 border-t border-gray-700 bg-gray-800">
+                        <form id="message-form" class="flex items-center space-x-3">
+                            <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 bg-gray-700 border border-gray-600 rounded-lg shadow-sm p-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" autocomplete="off">
+                            <button type="submit" id="send-button" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div> <!-- End #chat-container -->
+        </div> <!-- End relative container -->
+    </div> <!-- End #chat-popup -->
+    <!-- ========== JAVASCRIPT ========== -->
+    <!-- 1. Diner Mobile Menu Script -->
+    <script>
+      const menuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+      // Toggle mobile menu
+      menuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+      // Close mobile menu when a link is clicked
+      const menuLinks = mobileMenu.querySelectorAll('a');
+      menuLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          mobileMenu.classList.add('hidden');
+        });
+      });
+    </script>
+    <!-- 2. Chatbot Main Logic Script -->
+    <script type="module">
+        // --- START: CONFIGURATION ---
+        // ⚠️ ADD YOUR OWN SUPABASE AND N8N DETAILS HERE
+        // -----------------------------------------------------------------
+        const SUPABASE_URL = 'https://xycsmtuhqegvrlaljbac.supabase.co'; // e.g., 'https://[your-project-id].supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5Y3NtdHVocWVndnJsYWxqYmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNTcxNTcsImV4cCI6MjA3NzgzMzE1N30.G99o9A6uMSgoylFGNf5ZAemGnm70ExrZSm9ooUZACfM';
+        const N8N_WEBHOOK_URL = 'https://ai41.app.n8n.cloud/webhook/c366c33f-c9da-4c27-908e-1e4bfbc807c9'; // This is the URL for your AI Agent workflow
+        // -----------------------------------------------------------------
+        // --- END: CONFIGURATION ---
+        // --- Supabase Initialization (FIXED with better error handling) ---
+        const { createClient } = supabase;
+        let supabaseClient; // Declare with let
+        let initializationError = null; // <-- NEW: Store initialization error
+        try {
+            // Check for actual placeholders (empty strings or obvious placeholder text)
+            if (!SUPABASE_URL || !SUPABASE_ANON_KEY ||
+                SUPABASE_URL.includes('your-project-id') ||
+                SUPABASE_ANON_KEY.includes('your-anon-key') ||
+                SUPABASE_URL === 'https://[your-project-id].supabase.co') {
+                throw new Error("Please replace placeholders in the code with your real Supabase keys.");
+            }
+            // This line will throw its own error if the URL is invalid (e.g., missing 'https://')
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (error) {
+            console.warn(error.message);
+            initializationError = error.message; // <-- NEW: Store the *specific* error
+        }
+        // --- DOM Element Selection (Chatbot) ---
+        const chatToggleBubble = document.getElementById('chat-toggle-bubble');
+        const chatPopup = document.getElementById('chat-popup');
+        const closeButtons = document.querySelectorAll('.chat-close-button');
+        const authContainer = document.getElementById('auth-container');
+        const chatContainer = document.getElementById('chat-container');
+        const authForm = document.getElementById('auth-form');
+        const loginButton = document.getElementById('login-button');
+        const signupButton = document.getElementById('signup-button');
+        const authEmail = document.getElementById('auth-email');
+        const authPassword = document.getElementById('auth-password');
+        const userEmailElement = document.getElementById('user-email');
+        const signoutButton = document.getElementById('signout-button');
+        const newChatButton = document.getElementById('new-chat-button');
+        const sessionList = document.getElementById('session-list');
+        const historyDropdownButton = document.getElementById('history-dropdown-button');
+        const historyDropdownMenu = document.getElementById('history-dropdown-menu');
+        const selectedChatDisplay = document.getElementById('selected-chat-display');
+        const dropdownArrow = document.getElementById('dropdown-arrow');
+        const deleteAllButton = document.getElementById('delete-all-button');
+        const messagesContainer = document.getElementById('messages-container');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const errorToast = document.getElementById('error-toast');
+        const errorMessage = document.getElementById('error-message');
+        // --- Application State ---
+        let currentUser = null;
+        let currentSessionId = null;
+        let messageSubscription = null;
+        // --- UI Utility Functions ---
+        function toggleChatPopup(show) {
+            chatPopup.classList.toggle('hidden', !show);
+            chatToggleBubble.classList.toggle('hidden', show);
+        }
+        function showLoading(isLoading) {
+            loadingOverlay.classList.toggle('hidden', !isLoading);
+        }
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorToast.classList.remove('hidden');
+            setTimeout(() => {
+                errorToast.classList.add('hidden');
+            }, 3000);
+        }
+        function updateUI(user) {
+            currentUser = user;
+            if (user) {
+                // User is logged in
+                authContainer.classList.add('hidden');
+                chatContainer.classList.remove('hidden');
+                userEmailElement.textContent = user.email;
+                userEmailElement.title = user.email;
+                fetchSessions();
+                loadSession(null); // Clear the chat window
+            } else {
+                // User is logged out
+                authContainer.classList.remove('hidden');
+                chatContainer.classList.add('hidden');
+                currentUser = null;
+                currentSessionId = null;
+            }
+        }
+        function renderMessage(role, content) {
+            console.log('[Chatbot] renderMessage called', { role, contentLength: content.length, preview: content.substring(0, 50) });
+            const isUser = role === 'user';
+            const bubbleClass = isUser
+                ? 'bg-blue-600 ml-auto'
+                : 'bg-gray-700 mr-auto';
+            const messageEl = document.createElement('div');
+            messageEl.className = `max-w-xl p-4 rounded-lg shadow ${bubbleClass}`;
+            // Use <pre> tag to respect whitespace and newlines from the AI
+            const contentEl = document.createElement('pre');
+            contentEl.className = 'text-white whitespace-pre-wrap font-sans';
+            contentEl.textContent = content;
+            messageEl.appendChild(contentEl);
+            messagesContainer.appendChild(messageEl);
+            console.log('[Chatbot] Message rendered to DOM, scrolling to bottom');
+            // Smooth scroll to bottom after DOM update
+            setTimeout(() => {
+                messagesContainer.scrollTo({
+                    top: messagesContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 10);
+        }
+        let loadingMessageElement = null;
+        function showLoadingMessage() {
+            // Remove any existing loading message
+            if (loadingMessageElement) {
+                loadingMessageElement.remove();
+            }
+            // Create loading message bubble
+            loadingMessageElement = document.createElement('div');
+            loadingMessageElement.className = 'max-w-xl p-4 rounded-lg shadow bg-gray-700 mr-auto';
+            loadingMessageElement.id = 'loading-message';
+            // Create typing animation with dots
+            const loadingContent = document.createElement('div');
+            loadingContent.className = 'flex items-center space-x-1';
+            loadingContent.innerHTML = `
+                <div class="flex space-x-1">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s;"></div>
+                </div>
+            `;
+            loadingMessageElement.appendChild(loadingContent);
+            messagesContainer.appendChild(loadingMessageElement);
+            // Scroll to bottom
+            setTimeout(() => {
+                messagesContainer.scrollTo({
+                    top: messagesContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 10);
+        }
+        function hideLoadingMessage() {
+            if (loadingMessageElement) {
+                loadingMessageElement.remove();
+                loadingMessageElement = null;
+            }
+        }
+        // --- EVENT LISTENERS (UI TOGGLES) ---
+        // We attach these first so they work even if Supabase config is invalid
+        chatToggleBubble.addEventListener('click', () => toggleChatPopup(true));
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => toggleChatPopup(false));
+        });
+        // --- Auth Functions ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            if (!supabaseClient) {
+                // FIXED: Show the *specific* initialization error
+                const errorMsg = initializationError || "Chatbot is not configured. Add Supabase keys.";
+                showError(errorMsg);
+                return;
+            }
+            showLoading(true);
+            const { error } = await supabaseClient.auth.signInWithPassword({
+                email: authEmail.value,
+                password: authPassword.value,
+            });
+            showLoading(false);
+            if (error) showError(error.message);
+        }
+        async function handleSignup(e) {
+            e.preventDefault();
+            if (!supabaseClient) {
+                // FIXED: Show the *specific* initialization error
+                const errorMsg = initializationError || "Chatbot is not configured. Add Supabase keys.";
+                showError(errorMsg);
+                return;
+            }
+            if (authPassword.value.length < 6) {
+                showError("Password must be at least 6 characters long.");
+                return;
+            }
+            showLoading(true);
+            const { error } = await supabaseClient.auth.signUp({
+                email: authEmail.value,
+                password: authPassword.value,
+            });
+            showLoading(false);
+            if (error) showError(error.message);
+            else showError("Signup successful! Please check your email to verify.");
+        }
+        async function handleSignout() {
+            if (!supabaseClient) {
+                // FIXED: Show the *specific* initialization error
+                const errorMsg = initializationError || "Chatbot is not configured. Add Supabase keys.";
+                showError(errorMsg);
+                return;
+            }
+            showLoading(true);
+            const { error } = await supabaseClient.auth.signOut();
+            showLoading(false);
+            if (error) showError(error.message);
+            toggleChatPopup(false); // Close popup on signout
+        }
+        // --- Chat Functions ---
+        async function fetchSessions() {
+            if (!currentUser || !supabaseClient) return;
+            sessionList.innerHTML = ''; // Clear list
+            const { data, error } = await supabaseClient
+                .from('chat_sessions')
+                .select('id, created_at')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false });
+            if (error) {
+                showError(error.message);
+                return;
+            }
+            if (data && data.length > 0) {
+                data.forEach(session => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between p-3 hover:bg-gray-700 transition-colors border-b border-gray-700 last:border-b-0';
+                    item.dataset.sessionId = session.id;
+                    const chatInfo = document.createElement('div');
+                    chatInfo.className = 'flex-1 cursor-pointer';
+                    chatInfo.innerHTML = `
+                        <div class="text-sm font-medium text-white">Chat ${new Date(session.created_at).toLocaleDateString()}</div>
+                        <div class="text-xs text-gray-400">${new Date(session.created_at).toLocaleTimeString()}</div>
+                    `;
+                    // Click on chat info to load session
+                    chatInfo.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        loadSession(session.id);
+                        closeDropdown();
+                    });
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'text-red-400 hover:text-red-300 p-1.5 rounded transition-colors ml-2';
+                    deleteBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    `;
+                    deleteBtn.title = 'Delete chat';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteSession(session.id);
+                    });
+                    item.appendChild(chatInfo);
+                    item.appendChild(deleteBtn);
+                    sessionList.appendChild(item);
+                });
+            } else {
+                const emptyMessage = document.createElement('div');
+                emptyMessage.className = 'p-4 text-center text-gray-400 text-sm';
+                emptyMessage.textContent = 'No chat history. Start a new chat!';
+                sessionList.appendChild(emptyMessage);
+            }
+        }
+        async function loadSession(sessionId) {
+            console.log('[Chatbot] loadSession called', { sessionId });
+            // 1. Unsubscribe from any previous chat
+            if (messageSubscription) {
+                console.log('[Chatbot] Unsubscribing from previous session');
+                messageSubscription.unsubscribe();
+                messageSubscription = null;
+            }
+            currentSessionId = sessionId;
+            messagesContainer.innerHTML = ''; // Clear messages
+            // Update selected chat display
+            if (!sessionId) {
+                console.log('[Chatbot] No session ID, clearing display');
+                selectedChatDisplay.textContent = 'Select a chat or start new...';
+                messagesContainer.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-500"><p>Select a chat or start a new one.</p></div>';
+                return;
+            }
+            // Find and update display text
+            const sessionItem = document.querySelector(`[data-session-id="${sessionId}"]`);
+            if (sessionItem) {
+                const chatInfo = sessionItem.querySelector('div');
+                if (chatInfo) {
+                    const dateText = chatInfo.querySelector('.text-white')?.textContent || 'Chat';
+                    selectedChatDisplay.textContent = dateText;
+                }
+            }
+            // Highlight active session
+            document.querySelectorAll('#session-list [data-session-id]').forEach(item => {
+                item.classList.toggle('bg-gray-700', item.dataset.sessionId === sessionId);
+            });
+            // 2. Fetch all past messages for this session
+            console.log('[Chatbot] Fetching messages for session', sessionId);
+            showLoading(true);
+            const { data, error } = await supabaseClient
+                .from('chat_messages')
+                .select('role, content')
+                .eq('session_id', sessionId)
+                .order('created_at', { ascending: true });
+            showLoading(false);
+            if (error) {
+                console.error('[Chatbot] Error loading messages:', error);
+                showError(error.message);
+                return;
+            }
+            console.log('[Chatbot] Loaded messages', { count: data.length });
+            data.forEach(msg => renderMessage(msg.role, msg.content));
+            // Scroll to bottom after loading all messages
+            setTimeout(() => {
+                messagesContainer.scrollTo({
+                    top: messagesContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+            // 3. Subscribe to new messages for THIS session
+            console.log('[Chatbot] Subscribing to realtime updates for session', sessionId);
+            messageSubscription = supabaseClient
+                .channel(`chat-messages:${sessionId}`)
+                .on('postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'chat_messages',
+                        filter: `session_id=eq.${sessionId}`
+                    },
+                    (payload) => {
+                        console.log('[Chatbot] Realtime subscription received message', { role: payload.new.role, sessionId: payload.new.session_id });
+                        // We only render 'assistant' messages here,
+                        // because 'user' messages are rendered instantly on send.
+                        if (payload.new.role === 'assistant') {
+                            renderMessage(payload.new.role, payload.new.content);
+                        }
+                    }
+                )
+                .subscribe();
+        }
+        async function handleNewChat() {
+            console.log('[Chatbot] handleNewChat called');
+            if (!currentUser || !supabaseClient) {
+                console.warn('[Chatbot] Cannot create new chat - missing user or client');
+                return;
+            }
+            showLoading(true);
+            // 1. Create a new session in the database
+            console.log('[Chatbot] Creating new chat session');
+            const { data, error } = await supabaseClient
+                .from('chat_sessions')
+                .insert({ user_id: currentUser.id })
+                .select('id') // Ask Supabase to return the 'id' of the new row
+                .single(); // We only expect one row back
+            showLoading(false);
+            if (error) {
+                console.error('[Chatbot] Error creating new session:', error);
+                showError(error.message);
+                return;
+            }
+            console.log('[Chatbot] New session created', { sessionId: data.id });
+            // 2. Refresh the session list
+            await fetchSessions();
+            // 3. Load the new, empty chat session
+            loadSession(data.id);
+            // 4. Close dropdown
+            closeDropdown();
+        }
+        async function deleteSession(sessionId) {
+            if (!currentUser || !supabaseClient || !sessionId) return;
+            if (!confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+                return;
+            }
+            showLoading(true);
+            // Delete all messages first (due to foreign key constraints)
+            const { error: messagesError } = await supabaseClient
+                .from('chat_messages')
+                .delete()
+                .eq('session_id', sessionId);
+            if (messagesError) {
+                showLoading(false);
+                showError(messagesError.message);
+                return;
+            }
+            // Delete the session
+            const { error } = await supabaseClient
+                .from('chat_sessions')
+                .delete()
+                .eq('id', sessionId)
+                .eq('user_id', currentUser.id);
+            showLoading(false);
+            if (error) {
+                showError(error.message);
+                return;
+            }
+            // If the deleted session was the current one, clear it
+            if (currentSessionId === sessionId) {
+                loadSession(null);
+            }
+            // Refresh the session list
+            await fetchSessions();
+        }
+        async function deleteAllSessions() {
+            if (!currentUser || !supabaseClient) return;
+            if (!confirm('Are you sure you want to delete ALL chats? This action cannot be undone.')) {
+                return;
+            }
+            showLoading(true);
+            // Get all session IDs for this user
+            const { data: sessions, error: fetchError } = await supabaseClient
+                .from('chat_sessions')
+                .select('id')
+                .eq('user_id', currentUser.id);
+            if (fetchError) {
+                showLoading(false);
+                showError(fetchError.message);
+                return;
+            }
+            if (sessions && sessions.length > 0) {
+                const sessionIds = sessions.map(s => s.id);
+                // Delete all messages for these sessions
+                const { error: messagesError } = await supabaseClient
+                    .from('chat_messages')
+                    .delete()
+                    .in('session_id', sessionIds);
+                if (messagesError) {
+                    showLoading(false);
+                    showError(messagesError.message);
+                    return;
+                }
+            }
+            // Delete all sessions
+            const { error } = await supabaseClient
+                .from('chat_sessions')
+                .delete()
+                .eq('user_id', currentUser.id);
+            showLoading(false);
+            if (error) {
+                showError(error.message);
+                return;
+            }
+            // Clear current session
+            loadSession(null);
+            // Refresh the session list
+            await fetchSessions();
+            // Close dropdown
+            closeDropdown();
+        }
+        function toggleDropdown() {
+            const isHidden = historyDropdownMenu.classList.contains('hidden');
+            historyDropdownMenu.classList.toggle('hidden', !isHidden);
+            dropdownArrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+        function closeDropdown() {
+            historyDropdownMenu.classList.add('hidden');
+            dropdownArrow.style.transform = 'rotate(0deg)';
+        }
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!historyDropdownButton.contains(e.target) && !historyDropdownMenu.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+        async function handleSendMessage(e) {
+            e.preventDefault();
+            const messageText = messageInput.value.trim();
+            console.log('[Chatbot] handleSendMessage called', { messageText, currentSessionId, hasUser: !!currentUser });
+            
+            if (!messageText || !currentUser) {
+                console.warn('[Chatbot] Validation failed', { hasMessage: !!messageText, hasUser: !!currentUser });
+                if (!supabaseClient) {
+                    // FIXED: Show the *specific* initialization error
+                    const errorMsg = initializationError || "Chatbot is not configured. Add Supabase keys.";
+                    showError(errorMsg);
+                }
+                if (!N8N_WEBHOOK_URL || N8N_WEBHOOK_URL.includes('your-webhook-url') || N8N_WEBHOOK_URL === 'https://[your-webhook-url]') {
+                    showError("Chatbot N8N webhook is not configured.");
+                }
+                return;
+            }
+            
+            // Auto-create a session if one doesn't exist
+            if (!currentSessionId) {
+                console.log('[Chatbot] No session exists, creating new session automatically');
+                showLoading(true);
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('chat_sessions')
+                        .insert({ user_id: currentUser.id })
+                        .select('id')
+                        .single();
+                    showLoading(false);
+                    if (error) {
+                        console.error('[Chatbot] Error creating auto-session:', error);
+                        showError(error.message);
+                        return;
+                    }
+                    currentSessionId = data.id;
+                    console.log('[Chatbot] Auto-created session', { sessionId: currentSessionId });
+                    // Update the UI to reflect the new session
+                    selectedChatDisplay.textContent = 'New Chat';
+                    // Clear the placeholder message
+                    messagesContainer.innerHTML = '';
+                    // Refresh session list
+                    await fetchSessions();
+                    // Subscribe to realtime updates for this session
+                    messageSubscription = supabaseClient
+                        .channel(`chat-messages:${currentSessionId}`)
+                        .on('postgres_changes',
+                            {
+                                event: 'INSERT',
+                                schema: 'public',
+                                table: 'chat_messages',
+                                filter: `session_id=eq.${currentSessionId}`
+                            },
+                            (payload) => {
+                                console.log('[Chatbot] Realtime subscription received message', { role: payload.new.role, sessionId: payload.new.session_id });
+                                if (payload.new.role === 'assistant') {
+                                    renderMessage(payload.new.role, payload.new.content);
+                                }
+                            }
+                        )
+                        .subscribe();
+                } catch (error) {
+                    showLoading(false);
+                    console.error('[Chatbot] Error in auto-create session:', error);
+                    showError('Failed to create chat session. Please try again.');
+                    return;
+                }
+            }
+            // Disable form while sending
+            messageInput.value = '';
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+            
+            // 1. Immediately save the user's message to Supabase
+            // Our realtime subscription will show this, but we render
+            // it manually first for instant UI feedback.
+            console.log('[Chatbot] Rendering user message');
+            renderMessage('user', messageText);
+            
+            console.log('[Chatbot] Saving user message to Supabase', { session_id: currentSessionId });
+            const { error: insertError } = await supabaseClient
+                .from('chat_messages')
+                .insert({
+                    session_id: currentSessionId,
+                    role: 'user',
+                    content: messageText
+                });
+            if (insertError) {
+                console.error('[Chatbot] Error saving user message:', insertError);
+                showError(insertError.message);
+                // Re-enable form
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                return;
+            }
+            console.log('[Chatbot] User message saved successfully');
+            
+            // 2. Get the user's auth token
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+            if (sessionError || !session) {
+                console.error('[Chatbot] Session error:', sessionError);
+                showError("Your session has expired. Please log in again.");
+                handleSignout();
+                return;
+            }
+            const accessToken = session.access_token;
+            console.log('[Chatbot] Got auth token, calling n8n webhook');
+            
+            // Show loading animation
+            showLoadingMessage();
+            
+            // 3. Call the secure n8n webhook
+            try {
+                const requestBody = {
+                    message: messageText,
+                    session_id: currentSessionId
+                };
+                console.log('[Chatbot] Sending request to n8n', { url: N8N_WEBHOOK_URL, body: requestBody });
+                
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                console.log('[Chatbot] n8n response received', { status: response.status, statusText: response.statusText, ok: response.ok });
+                
+                if (!response.ok) {
+                    let errText = "The AI agent failed to respond.";
+                    try {
+                        const err = await response.json();
+                        errText = err.message || err.error || errText;
+                    } catch(e) {
+                        errText = await response.text();
+                    }
+                    console.error('[Chatbot] n8n error response:', errText);
+                    hideLoadingMessage(); // Hide loading on error
+                    throw new Error(errText);
+                }
+                // The n8n 'Respond to Webhook' node sends back the text directly
+                const aiResponseText = (await response.text()).trim();
+                console.log('[Chatbot] n8n response text received', { length: aiResponseText.length, preview: aiResponseText.substring(0, 100) });
+                
+                // Hide loading animation before showing response
+                hideLoadingMessage();
+                
+                // 4. Save the AI's response to Supabase
+                console.log('[Chatbot] Saving AI response to Supabase');
+                const { error: aiInsertError } = await supabaseClient
+                    .from('chat_messages')
+                    .insert({
+                        session_id: currentSessionId,
+                        role: 'assistant',
+                        content: aiResponseText
+                    });
+                if (aiInsertError) {
+                    console.error('[Chatbot] Error saving AI response:', aiInsertError);
+                    showError(aiInsertError.message);
+                } else {
+                    console.log('[Chatbot] AI response saved successfully, rendering message');
+                    // Render the message immediately (don't rely solely on realtime subscription)
+                    renderMessage('assistant', aiResponseText);
+                }
+            } catch (error) {
+                console.error('[Chatbot] Error in handleSendMessage:', error);
+                hideLoadingMessage(); // Hide loading on error
+                showError(error.message);
+            } finally {
+                // Re-enable form
+                console.log('[Chatbot] Re-enabling form');
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+        // --- Event Listeners Setup ---
+        // Chat Popup Toggle
+        // MOVED TO TOP
+        // Auth
+        authForm.addEventListener('submit', handleLogin); // Changed this from loginButton
+        signupButton.addEventListener('click', handleSignup); // Changed this from loginButton
+        signoutButton.addEventListener('click', handleSignout);
+        // Chat
+        newChatButton.addEventListener('click', handleNewChat);
+        messageForm.addEventListener('submit', handleSendMessage);
+        // Dropdown toggle
+        historyDropdownButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+        // Delete all button
+        deleteAllButton.addEventListener('click', deleteAllSessions);
+        // --- Main Application Entry Point ---
+        if (supabaseClient) {
+            // Only set up the auth listener if initialization was successful
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                updateUI(session ? session.user : null);
+            });
+        }
+    </script>
+</body>
+</html>
