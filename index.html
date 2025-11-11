@@ -210,6 +210,22 @@
             <a href="#gallery" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Gallery</a>
             <a href="#contact" class="font-medium text-gray-600 hover:text-primary-600 transition duration-150">Contact</a>
           </div>
+          <!-- Add Login/Signup or Welcome Message -->
+<div id="auth-section" class="flex items-center space-x-4">
+  <form id="site-auth-form" class="flex space-x-2" style="display:none;">
+    <input type="email" id="site-email" placeholder="Email"
+           class="px-2 py-1 border rounded" required>
+    <input type="password" id="site-password" placeholder="Password"
+           class="px-2 py-1 border rounded" required minlength="6">
+    <button id="site-login" type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">Login</button>
+    <button id="site-signup" type="button" class="bg-gray-600 text-white px-3 py-1 rounded">Sign Up</button>
+  </form>
+
+  <div id="welcome-message" class="text-gray-700 font-medium hidden">
+    Welcome, <span id="username-display"></span>!
+    <button id="site-logout" class="ml-2 bg-red-500 text-white px-2 py-1 rounded text-sm">Logout</button>
+  </div>
+</div>
           <!-- Mobile Menu Button -->
           <div class="md:hidden">
             <button id="mobile-menu-button" class="text-gray-700 hover:text-primary-600 focus:outline-none">
@@ -232,7 +248,8 @@
     <main>
         <!-- Diner Content Sections (Hero, About, Menu, etc.) -->
         <!-- 1. Hero Section -->
-        <section id="home" class="relative h-[60vh] md:h-[calc(100vh-80px)] min-h-[400px]">
+        <section id="home" class="relative h-[60vh] md:h-[calc(100vh-80px)] min-h-[400px] <p id="hero-welcome" class="mt-2 text-lg text-yellow-300 hidden"></p>
+">
             <!-- Background Image -->
             <div class="absolute inset-0">
             <img src="https://images.unsplash.com/photo-1667388969250-1c7220bf3f37?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=910"
@@ -400,27 +417,7 @@
             <div id="error-toast" class="absolute bottom-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50 hidden transition-opacity duration-300">
                 <span id="error-message"></span>
             </div>
-            <!-- 2a. Auth Container (Login/Signup) -->
-            <div id="auth-container" class="h-full flex items-center justify-center">
-                <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-sm">
-                    <h2 class="text-2xl font-bold text-center mb-6">Chatbot Login</h2>
-                    <form id="auth-form" class="space-y-4">
-                        <div>
-                            <label for="email" class="block text-sm font-medium text-gray-300">Email</label>
-                            <input type="email" id="auth-email" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="password" class="block text-sm font-medium text-gray-300">Password</label>
-                            <input type="password" id="auth-password" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm p-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" minlength="6">
-                        </div>
-                        <div class="flex space-x-2">
-                            <button type="submit" id="login-button" class="flex-1 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">Login</button>
-                            <button type="button" id="signup-button" class="flex-1 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-200">Sign Up</button>
-                        </div>
-                    </form>
-                    <button type="button" class="chat-close-button text-center text-sm text-gray-400 mt-4 w-full hover:text-blue-400">&larr; Close Chat</button>
-                </div>
-            </div>
+            
             <!-- 2b. Chat Container (Shown when logged in) -->
             <div id="chat-container" class="flex h-full flex-col hidden">
                 <!-- Main Chat Area -->
@@ -562,13 +559,7 @@
         const chatToggleBubble = document.getElementById('chat-toggle-bubble');
         const chatPopup = document.getElementById('chat-popup');
         const closeButtons = document.querySelectorAll('.chat-close-button');
-        const authContainer = document.getElementById('auth-container');
         const chatContainer = document.getElementById('chat-container');
-        const authForm = document.getElementById('auth-form');
-        const loginButton = document.getElementById('login-button');
-        const signupButton = document.getElementById('signup-button');
-        const authEmail = document.getElementById('auth-email');
-        const authPassword = document.getElementById('auth-password');
         const userEmailElement = document.getElementById('user-email');
         const signoutButton = document.getElementById('signout-button');
         const newChatButton = document.getElementById('new-chat-button');
@@ -613,23 +604,19 @@
             }, 3000);
         }
         function updateUI(user) {
-            currentUser = user;
-            if (user) {
-                // User is logged in
-                authContainer.classList.add('hidden');
-                chatContainer.classList.remove('hidden');
-                userEmailElement.textContent = user.email;
-                userEmailElement.title = user.email;
-                fetchSessions();
-                loadSession(null); // Clear the chat window
-            } else {
-                // User is logged out
-                authContainer.classList.remove('hidden');
-                chatContainer.classList.add('hidden');
-                currentUser = null;
-                currentSessionId = null;
-            }
-        }
+  currentUser = user;
+  if (user) {
+      chatContainer.classList.remove('hidden');
+      userEmailElement.textContent = user.email;
+      fetchSessions();
+      loadSession(null);
+  } else {
+      chatContainer.classList.add('hidden');
+      currentUser = null;
+      currentSessionId = null;
+  }
+}
+
         let sessionTimeoutId;
 
 function setInputDisabled(isDisabled) {
@@ -656,7 +643,7 @@ function setInputDisabled(isDisabled) {
 function resetSessionTimeout() {
   if (sessionTimeoutId) clearTimeout(sessionTimeoutId);
   // 15 minutes session; adjust as needed
-  sessionTimeoutId = setTimeout(() => setInputDisabled(true), 15000);
+  sessionTimeoutId = setTimeout(() => setInputDisabled(true), 180000);
   setInputDisabled(false);
 }
 
@@ -1155,7 +1142,7 @@ if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
             // 4. Close dropdown
             closeDropdown();
 
-            const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min from now
+            const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString(); // 15 min from now
 const {data: deleteData, error: deleteError} = await supabaseClient
   .from('chat_sessions')
   .insert({ user_id: currentUser.id, expires_at: expiresAt })
@@ -1534,8 +1521,7 @@ const {data: deleteData, error: deleteError} = await supabaseClient
         // Chat Popup Toggle
         // MOVED TO TOP
         // Auth
-        authForm.addEventListener('submit', handleLogin); // Changed this from loginButton
-        signupButton.addEventListener('click', handleSignup); // Changed this from loginButton
+    
         signoutButton.addEventListener('click', handleSignout);
         // Chat
         newChatButton.addEventListener('click', handleNewChat);
@@ -1549,6 +1535,73 @@ const {data: deleteData, error: deleteError} = await supabaseClient
             e.stopPropagation();
             toggleDropdown();
         });
+        // ========== WEBSITE AUTH LOGIC ==========
+const siteAuthForm = document.getElementById('site-auth-form');
+const siteEmail = document.getElementById('site-email');
+const sitePassword = document.getElementById('site-password');
+const siteLogin = document.getElementById('site-login');
+const siteSignup = document.getElementById('site-signup');
+const welcomeMessage = document.getElementById('welcome-message');
+const usernameDisplay = document.getElementById('username-display');
+const siteLogout = document.getElementById('site-logout');
+
+function showAuthUI(user) {
+  if (user) {
+    siteAuthForm.style.display = 'none';
+    welcomeMessage.classList.remove('hidden');
+    usernameDisplay.textContent = user.email.split('@')[0];
+  } else {
+    siteAuthForm.style.display = 'flex';
+    welcomeMessage.classList.add('hidden');
+  }
+  const heroWelcome = document.getElementById('hero-welcome');
+if (user) {
+  heroWelcome.classList.remove('hidden');
+  heroWelcome.textContent = `Welcome, ${user.email.split('@')[0]}!`;
+} else {
+  heroWelcome.classList.add('hidden');
+}
+
+}
+
+if (supabaseClient) {
+  // Check if user already logged in
+  supabaseClient.auth.getSession().then(({ data }) => {
+    showAuthUI(data.session ? data.session.user : null);
+    updateUI(data.session ? data.session.user : null);
+  });
+
+  // Auth state listener
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    showAuthUI(session ? session.user : null);
+    updateUI(session ? session.user : null);
+  });
+}
+
+siteAuthForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: siteEmail.value,
+    password: sitePassword.value,
+  });
+  if (error) alert(error.message);
+});
+
+siteSignup.addEventListener('click', async () => {
+  if (sitePassword.value.length < 6) return alert('Password must be at least 6 characters.');
+  const { error } = await supabaseClient.auth.signUp({
+    email: siteEmail.value,
+    password: sitePassword.value,
+  });
+  if (error) alert(error.message);
+  else alert('Signup successful! Check your email to verify.');
+});
+
+siteLogout.addEventListener('click', async () => {
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) alert(error.message);
+});
+
         // Delete all button
         deleteAllButton.addEventListener('click', deleteAllSessions);
         // --- Main Application Entry Point ---
