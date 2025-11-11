@@ -1660,11 +1660,43 @@ siteSignup.addEventListener('click', async () => {
 });
 
 // --- Logout ---
+// --- Safe Logout (handles 403 Forbidden + missing session cases) ---
 siteLogout.addEventListener('click', async () => {
   if (!supabaseClient) return alert("Supabase not initialized");
-  const { error } = await supabaseClient.auth.signOut();
-  if (error) alert(error.message);
+
+  try {
+    // Try to get the current session first
+    const { data, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) {
+      console.warn("Error checking session before logout:", sessionError.message);
+    }
+
+    const session = data?.session;
+
+    if (!session) {
+      console.warn("⚠️ No active session found — forcing local signout cleanup.");
+      await supabaseClient.auth.signOut({ scope: 'local' }); // clear browser cache
+      showAuthUI(null);
+      updateUI(null);
+      return;
+    }
+
+    // Normal logout if session is active
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+      console.error("Logout failed:", error.message);
+      alert("Logout failed: " + error.message);
+    } else {
+      console.log("✅ Logged out successfully");
+      showAuthUI(null);
+      updateUI(null);
+    }
+  } catch (err) {
+    console.error("Logout exception:", err);
+    alert("Unexpected logout error: " + err.message);
+  }
 });
+
 
 
         // Delete all button
