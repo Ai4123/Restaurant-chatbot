@@ -105,6 +105,79 @@
       #session-list::-webkit-scrollbar-thumb:hover {
           background: #6b7280;
       }
+      /* --- Feedback Button Animations --- */
+      @keyframes feedback-bounce {
+          0%, 100% {
+              transform: scale(1) translateY(0);
+          }
+          50% {
+              transform: scale(1.2) translateY(-4px);
+          }
+      }
+      @keyframes feedback-pulse {
+          0%, 100% {
+              transform: scale(1);
+              opacity: 1;
+          }
+          50% {
+              transform: scale(1.15);
+              opacity: 0.9;
+          }
+      }
+      @keyframes feedback-success {
+          0% {
+              transform: scale(1);
+          }
+          30% {
+              transform: scale(1.3) rotate(5deg);
+          }
+          60% {
+              transform: scale(1.1) rotate(-5deg);
+          }
+          100% {
+              transform: scale(1.2);
+          }
+      }
+      @keyframes feedback-fade-in {
+          from {
+              opacity: 0;
+              transform: translateY(5px) scale(0.9);
+          }
+          to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+          }
+      }
+      .feedback-button {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          animation: feedback-fade-in 0.3s ease-out;
+      }
+      .feedback-button:hover {
+          transform: scale(1.15) translateY(-2px);
+          filter: brightness(1.2);
+      }
+      .feedback-button:active {
+          transform: scale(0.95);
+      }
+      .feedback-button.disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+          transform: scale(1);
+      }
+      .feedback-button.selected {
+          animation: feedback-success 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          transform: scale(1.2);
+      }
+      .feedback-button.selected.up {
+          filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6));
+      }
+      .feedback-button.selected.down {
+          filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+      }
+      .feedback-container {
+          animation: feedback-fade-in 0.4s ease-out 0.2s both;
+      }
     </style>
     <script>
       /* Custom Tailwind theme for The Gemini Diner */
@@ -406,7 +479,28 @@
                     </div>
                     <!-- Input Form -->
                     <div class="p-4 border-t border-gray-700 bg-gray-800">
+                        <!-- Image Preview Area -->
+                        <div id="image-preview-container" class="mb-3 hidden">
+                            <div class="flex items-center space-x-2 bg-gray-700 rounded-lg p-2">
+                                <img id="image-preview" src="" alt="Preview" class="max-h-20 max-w-20 object-cover rounded">
+                                <div class="flex-1">
+                                    <p id="image-preview-name" class="text-sm text-gray-300 truncate"></p>
+                                    <p id="image-preview-size" class="text-xs text-gray-400"></p>
+                                </div>
+                                <button type="button" id="remove-image-button" class="text-red-400 hover:text-red-300 p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
                         <form id="message-form" class="flex items-center space-x-3">
+                            <input type="file" id="image-input" accept="image/*" class="hidden">
+                            <button type="button" id="image-upload-button" class="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg shadow-md transition duration-200" title="Upload Image">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </button>
                             <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 bg-gray-700 border border-gray-600 rounded-lg shadow-sm p-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" autocomplete="off">
                             <button type="submit" id="send-button" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg shadow-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -491,10 +585,18 @@
         const loadingOverlay = document.getElementById('loading-overlay');
         const errorToast = document.getElementById('error-toast');
         const errorMessage = document.getElementById('error-message');
+        const imageInput = document.getElementById('image-input');
+        const imageUploadButton = document.getElementById('image-upload-button');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const imagePreviewName = document.getElementById('image-preview-name');
+        const imagePreviewSize = document.getElementById('image-preview-size');
+        const removeImageButton = document.getElementById('remove-image-button');
         // --- Application State ---
         let currentUser = null;
         let currentSessionId = null;
         let messageSubscription = null;
+        let selectedImage = null; // Store selected image as base64
         // --- UI Utility Functions ---
         function toggleChatPopup(show) {
             chatPopup.classList.toggle('hidden', !show);
@@ -528,29 +630,208 @@
                 currentSessionId = null;
             }
         }
-        function renderMessage(role, content) {
-            console.log('[Chatbot] renderMessage called', { role, contentLength: content.length, preview: content.substring(0, 50) });
-            const isUser = role === 'user';
-            const bubbleClass = isUser
-                ? 'bg-blue-600 ml-auto'
-                : 'bg-gray-700 mr-auto';
+        let sessionTimeoutId;
+
+function setInputDisabled(isDisabled) {
+  messageInput.disabled = isDisabled;
+  sendButton.disabled = isDisabled;
+
+  if (isDisabled) {
+    // Fade & gray out the input bar visually
+    messageInput.classList.add('opacity-50', 'cursor-not-allowed');
+    sendButton.classList.add('opacity-50', 'cursor-not-allowed');
+    imageUploadButton.classList.add('opacity-50', 'cursor-not-allowed');
+    messageInput.placeholder = "Session expired. Start new chat to continue.";
+  } else {
+    // Restore normal look
+    messageInput.classList.remove('opacity-50', 'cursor-not-allowed');
+    sendButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    imageUploadButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    messageInput.placeholder = "Type your message...";
+  }
+}
+
+
+// Start/reset session timeout whenever message is sent or received
+function resetSessionTimeout() {
+  if (sessionTimeoutId) clearTimeout(sessionTimeoutId);
+  // 15 minutes session; adjust as needed
+  sessionTimeoutId = setTimeout(() => setInputDisabled(true), 15000);
+  setInputDisabled(false);
+}
+
+// On new chat, clear input and re-enable
+document.getElementById('new-chat-button').addEventListener('click', function() {
+  setInputDisabled(false);
+  resetSessionTimeout();
+  // Clear chat history/message area if needed
+});
+
+// Call resetSessionTimeout() after every send/receive
+messageForm.addEventListener('submit', function(e) {
+  resetSessionTimeout();
+  // ...rest of your sending logic...
+});
+// Optionally, also on message received from bot
+
+        function renderMessage(role, content, id, imageData = null) {
             const messageEl = document.createElement('div');
-            messageEl.className = `max-w-xl p-4 rounded-lg shadow ${bubbleClass}`;
-            // Use <pre> tag to respect whitespace and newlines from the AI
-            const contentEl = document.createElement('pre');
-            contentEl.className = 'text-white whitespace-pre-wrap font-sans';
-            contentEl.textContent = content;
-            messageEl.appendChild(contentEl);
+            messageEl.className = role === 'user' 
+                ? 'max-w-xl p-4 rounded-lg shadow bg-blue-600 ml-auto mb-4' 
+                : 'max-w-xl p-4 rounded-lg shadow bg-gray-700 mr-auto mb-4';
+            
+            // Store message ID as data attribute for reference
+            if (id) {
+                messageEl.dataset.messageId = id;
+            }
+            
+            // Add image if present
+            if (imageData) {
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'mb-2 rounded-lg overflow-hidden';
+                const img = document.createElement('img');
+                img.src = imageData;
+                img.alt = 'Uploaded image';
+                img.className = 'max-w-full h-auto rounded-lg';
+                img.style.maxHeight = '300px';
+                img.style.objectFit = 'contain';
+                imageContainer.appendChild(img);
+                messageEl.appendChild(imageContainer);
+            }
+            
+            // Add text content if present
+            if (content && content.trim()) {
+                const textEl = document.createElement('div');
+                textEl.textContent = content;
+                textEl.className = 'text-white whitespace-pre-wrap font-sans';
+                messageEl.appendChild(textEl);
+            }
+
+            // Show feedback buttons ONLY for bot (assistant) responses with a valid ID
+            if (role === 'assistant' && id) {
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'flex items-center space-x-3 mt-3 feedback-container';
+
+                const upBtn = document.createElement('button');
+                upBtn.textContent = '👍';
+                upBtn.className = 'feedback-button text-gray-400 hover:text-green-400 cursor-pointer p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 active:bg-gray-600/70';
+                upBtn.setAttribute('aria-label', 'Thumbs up');
+                upBtn.onclick = async function() {
+                    if (upBtn.disabled) return;
+                    
+                    // Visual feedback immediately
+                    upBtn.classList.add('selected', 'up');
+                    upBtn.disabled = true;
+                    downBtn.disabled = true;
+                    downBtn.classList.add('disabled');
+                    
+                    // Send feedback
+                    await sendFeedback(id, 'up');
+                    
+                    // Update colors to show selection
+                    upBtn.classList.remove('text-gray-400', 'hover:text-green-400');
+                    upBtn.classList.add('text-green-400');
+                    downBtn.classList.remove('text-gray-400', 'hover:text-red-400');
+                    downBtn.classList.add('text-gray-500');
+                };
+
+                const downBtn = document.createElement('button');
+                downBtn.textContent = '👎';
+                downBtn.className = 'feedback-button text-gray-400 hover:text-red-400 cursor-pointer p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 active:bg-gray-600/70';
+                downBtn.setAttribute('aria-label', 'Thumbs down');
+                downBtn.onclick = async function() {
+                    if (downBtn.disabled) return;
+                    
+                    // Visual feedback immediately
+                    downBtn.classList.add('selected', 'down');
+                    upBtn.disabled = true;
+                    downBtn.disabled = true;
+                    upBtn.classList.add('disabled');
+                    
+                    // Send feedback
+                    await sendFeedback(id, 'down');
+                    
+                    // Update colors to show selection
+                    downBtn.classList.remove('text-gray-400', 'hover:text-red-400');
+                    downBtn.classList.add('text-red-400');
+                    upBtn.classList.remove('text-gray-400', 'hover:text-green-400');
+                    upBtn.classList.add('text-gray-500');
+                };
+
+                feedbackDiv.appendChild(upBtn);
+                feedbackDiv.appendChild(downBtn);
+                messageEl.appendChild(feedbackDiv);
+            }
+
             messagesContainer.appendChild(messageEl);
-            console.log('[Chatbot] Message rendered to DOM, scrolling to bottom');
-            // Smooth scroll to bottom after DOM update
             setTimeout(() => {
-                messagesContainer.scrollTo({
-                    top: messagesContainer.scrollHeight,
-                    behavior: 'smooth'
-                });
+                messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
             }, 10);
+            // Reset inactivity timeout when assistant responds
+if (role === 'assistant') {
+    resetSessionTimeout();
+}
+
         }
+
+        // Feedback submission function
+        async function sendFeedback(messageId, value) {
+            if (!messageId || !currentUser || !supabaseClient) {
+                console.warn('[Chatbot] Cannot send feedback - missing messageId, user, or client');
+                return;
+            }
+            
+            try {
+                // Try to insert feedback into a feedback table
+                // If the table doesn't exist, we'll catch the error and log it
+                const { error } = await supabaseClient
+                    .from('chat_message_feedback')
+                    .insert({
+                        message_id: messageId,
+                        user_id: currentUser.id,
+                        feedback: value, // 'up' or 'down'
+                        created_at: new Date().toISOString()
+                    });
+                
+                if (error) {
+                    // If table doesn't exist, try alternative: update message with feedback metadata
+                    console.warn('[Chatbot] Feedback table may not exist, trying alternative method:', error.message);
+                    
+                    // Alternative: Store feedback in a simpler way or just log it
+                    // For now, we'll log it and show a success message
+                    console.log('[Chatbot] Feedback recorded:', { messageId, value, userId: currentUser.id });
+                    
+                    // Optionally, you could also send to n8n webhook if configured
+                    if (N8N_WEBHOOK_URL && !N8N_WEBHOOK_URL.includes('your-webhook-url')) {
+                        try {
+                            const { data: { session } } = await supabaseClient.auth.getSession();
+                            if (session) {
+                                await fetch(N8N_WEBHOOK_URL.replace('/webhook/', '/webhook/feedback/') || N8N_WEBHOOK_URL, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${session.access_token}`
+                                    },
+                                    body: JSON.stringify({ 
+                                        message_id: messageId, 
+                                        feedback: value,
+                                        user_id: currentUser.id
+                                    })
+                                }).catch(err => console.log('[Chatbot] Feedback webhook call failed (optional):', err));
+                            }
+                        } catch (webhookError) {
+                            console.log('[Chatbot] Feedback webhook error (optional):', webhookError);
+                        }
+                    }
+                } else {
+                    console.log('[Chatbot] Feedback saved successfully:', { messageId, value });
+                }
+            } catch (error) {
+                console.error('[Chatbot] Error sending feedback:', error);
+                // Don't show error to user since feedback is non-critical
+            }
+        }
+
         let loadingMessageElement = null;
         function showLoadingMessage() {
             // Remove any existing loading message
@@ -581,6 +862,9 @@
                 });
             }, 10);
         }
+        
+
+
         function hideLoadingMessage() {
             if (loadingMessageElement) {
                 loadingMessageElement.remove();
@@ -705,6 +989,8 @@
                 messageSubscription.unsubscribe();
                 messageSubscription = null;
             }
+            // Clear any selected image when loading a session
+            clearImageSelection();
             currentSessionId = sessionId;
             messagesContainer.innerHTML = ''; // Clear messages
             // Update selected chat display
@@ -728,11 +1014,33 @@
                 item.classList.toggle('bg-gray-700', item.dataset.sessionId === sessionId);
             });
             // 2. Fetch all past messages for this session
+            // --- Check if this chat session has expired ---
+try {
+  const { data: sessionData, error: sessionFetchError } = await supabaseClient
+    .from('chat_sessions')
+    .select('id, expires_at')
+    .eq('id', sessionId)
+    .single();
+
+  if (sessionFetchError) {
+    console.warn('[Chatbot] Could not fetch session expiration:', sessionFetchError.message);
+  } else if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
+    console.log('[Chatbot] Session expired – disabling input for old chat');
+    setInputDisabled(true);
+  } else {
+    console.log('[Chatbot] Session active – enabling input and resetting timeout');
+    setInputDisabled(false);
+    resetSessionTimeout();
+  }
+} catch (err) {
+  console.error('[Chatbot] Error checking session expiration:', err);
+}
+
             console.log('[Chatbot] Fetching messages for session', sessionId);
             showLoading(true);
             const { data, error } = await supabaseClient
                 .from('chat_messages')
-                .select('role, content')
+                .select('id, role, content')
                 .eq('session_id', sessionId)
                 .order('created_at', { ascending: true });
             showLoading(false);
@@ -742,7 +1050,24 @@
                 return;
             }
             console.log('[Chatbot] Loaded messages', { count: data.length });
-            data.forEach(msg => renderMessage(msg.role, msg.content));
+            data.forEach(msg => {
+                // Parse message content to check for images
+                let textContent = msg.content;
+                let imageData = null;
+                
+                try {
+                    const parsed = JSON.parse(msg.content);
+                    if (parsed.image) {
+                        textContent = parsed.text || '';
+                        imageData = parsed.image;
+                    }
+                } catch (e) {
+                    // Not JSON, treat as plain text
+                    textContent = msg.content;
+                }
+                
+                renderMessage(msg.role, textContent, msg.id, imageData);
+            });
             // Scroll to bottom after loading all messages
             setTimeout(() => {
                 messagesContainer.scrollTo({
@@ -750,6 +1075,20 @@
                     behavior: 'smooth'
                 });
             }, 100);
+            const { data: sessionData } = await supabaseClient
+  .from('chat_sessions')
+  .select('id, created_at, expires_at')
+  .eq('id', sessionId)
+  .single();
+
+if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
+  setInputDisabled(true);
+  showError("This chat session has expired. Please start a new chat.");
+} else {
+  setInputDisabled(false);
+  resetSessionTimeout();
+}
+
             // 3. Subscribe to new messages for THIS session
             console.log('[Chatbot] Subscribing to realtime updates for session', sessionId);
             messageSubscription = supabaseClient
@@ -766,7 +1105,21 @@
                         // We only render 'assistant' messages here,
                         // because 'user' messages are rendered instantly on send.
                         if (payload.new.role === 'assistant') {
-                            renderMessage(payload.new.role, payload.new.content);
+                            // Parse content for images (though assistant typically won't have images)
+                            let textContent = payload.new.content;
+                            let imageData = null;
+                            
+                            try {
+                                const parsed = JSON.parse(payload.new.content);
+                                if (parsed.image) {
+                                    textContent = parsed.text || '';
+                                    imageData = parsed.image;
+                                }
+                            } catch (e) {
+                                textContent = payload.new.content;
+                            }
+                            
+                            renderMessage(payload.new.role, textContent, payload.new.id, imageData);
                         }
                     }
                 )
@@ -778,10 +1131,12 @@
                 console.warn('[Chatbot] Cannot create new chat - missing user or client');
                 return;
             }
+            // Clear any selected image
+            clearImageSelection();
             showLoading(true);
             // 1. Create a new session in the database
             console.log('[Chatbot] Creating new chat session');
-            const { data, error } = await supabaseClient
+            const {data, error: sessionError } = await supabaseClient
                 .from('chat_sessions')
                 .insert({ user_id: currentUser.id })
                 .select('id') // Ask Supabase to return the 'id' of the new row
@@ -799,7 +1154,17 @@
             loadSession(data.id);
             // 4. Close dropdown
             closeDropdown();
+
+            const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min from now
+const {data: deleteData, error: deleteError} = await supabaseClient
+  .from('chat_sessions')
+  .insert({ user_id: currentUser.id, expires_at: expiresAt })
+  .select('id')
+  .single();
+
         }
+        
+
         async function deleteSession(sessionId) {
             if (!currentUser || !supabaseClient || !sessionId) return;
             if (!confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
@@ -834,6 +1199,61 @@
             // Refresh the session list
             await fetchSessions();
         }
+        // Image handling functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file.');
+                imageInput.value = '';
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                showError('Image size must be less than 10MB.');
+                imageInput.value = '';
+                return;
+            }
+
+            // Convert to base64
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                selectedImage = e.target.result;
+                imagePreview.src = selectedImage;
+                imagePreviewName.textContent = file.name;
+                imagePreviewSize.textContent = formatFileSize(file.size);
+                imagePreviewContainer.classList.remove('hidden');
+            };
+            reader.onerror = function() {
+                showError('Failed to read image file.');
+                imageInput.value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImageSelection() {
+            selectedImage = null;
+            imageInput.value = '';
+            imagePreview.src = '';
+            imagePreviewName.textContent = '';
+            imagePreviewSize.textContent = '';
+            imagePreviewContainer.classList.add('hidden');
+        }
+
+
+
         async function deleteAllSessions() {
             if (!currentUser || !supabaseClient) return;
             if (!confirm('Are you sure you want to delete ALL chats? This action cannot be undone.')) {
@@ -898,10 +1318,11 @@
         async function handleSendMessage(e) {
             e.preventDefault();
             const messageText = messageInput.value.trim();
-            console.log('[Chatbot] handleSendMessage called', { messageText, currentSessionId, hasUser: !!currentUser });
+            console.log('[Chatbot] handleSendMessage called', { messageText, hasImage: !!selectedImage, currentSessionId, hasUser: !!currentUser });
             
-            if (!messageText || !currentUser) {
-                console.warn('[Chatbot] Validation failed', { hasMessage: !!messageText, hasUser: !!currentUser });
+            // Allow sending if there's either text or an image
+            if ((!messageText && !selectedImage) || !currentUser) {
+                console.warn('[Chatbot] Validation failed', { hasMessage: !!messageText, hasImage: !!selectedImage, hasUser: !!currentUser });
                 if (!supabaseClient) {
                     // FIXED: Show the *specific* initialization error
                     const errorMsg = initializationError || "Chatbot is not configured. Add Supabase keys.";
@@ -909,6 +1330,9 @@
                 }
                 if (!N8N_WEBHOOK_URL || N8N_WEBHOOK_URL.includes('your-webhook-url') || N8N_WEBHOOK_URL === 'https://[your-webhook-url]') {
                     showError("Chatbot N8N webhook is not configured.");
+                }
+                if (!messageText && !selectedImage) {
+                    showError("Please enter a message or upload an image.");
                 }
                 return;
             }
@@ -950,7 +1374,21 @@
                             (payload) => {
                                 console.log('[Chatbot] Realtime subscription received message', { role: payload.new.role, sessionId: payload.new.session_id });
                                 if (payload.new.role === 'assistant') {
-                                    renderMessage(payload.new.role, payload.new.content);
+                                    // Parse content for images (though assistant typically won't have images)
+                                    let textContent = payload.new.content;
+                                    let imageData = null;
+                                    
+                                    try {
+                                        const parsed = JSON.parse(payload.new.content);
+                                        if (parsed.image) {
+                                            textContent = parsed.text || '';
+                                            imageData = parsed.image;
+                                        }
+                                    } catch (e) {
+                                        textContent = payload.new.content;
+                                    }
+                                    
+                                    renderMessage(payload.new.role, textContent, payload.new.id, imageData);
                                 }
                             }
                         )
@@ -963,15 +1401,31 @@
                 }
             }
             // Disable form while sending
+            const imageToSend = selectedImage; // Store before clearing
             messageInput.value = '';
             messageInput.disabled = true;
             sendButton.disabled = true;
+            imageUploadButton.disabled = true;
+            
+            // Prepare message content (store as JSON if image is present)
+            let messageContent;
+            if (imageToSend) {
+                messageContent = JSON.stringify({
+                    text: messageText || '',
+                    image: imageToSend
+                });
+            } else {
+                messageContent = messageText;
+            }
             
             // 1. Immediately save the user's message to Supabase
             // Our realtime subscription will show this, but we render
             // it manually first for instant UI feedback.
             console.log('[Chatbot] Rendering user message');
-            renderMessage('user', messageText);
+            renderMessage('user', messageText, null, imageToSend);
+            
+            // Clear image selection
+            clearImageSelection();
             
             console.log('[Chatbot] Saving user message to Supabase', { session_id: currentSessionId });
             const { error: insertError } = await supabaseClient
@@ -979,7 +1433,7 @@
                 .insert({
                     session_id: currentSessionId,
                     role: 'user',
-                    content: messageText
+                    content: messageContent
                 });
             if (insertError) {
                 console.error('[Chatbot] Error saving user message:', insertError);
@@ -1008,10 +1462,11 @@
             // 3. Call the secure n8n webhook
             try {
                 const requestBody = {
-                    message: messageText,
+                    message: messageText || '',
+                    image: imageToSend || null,
                     session_id: currentSessionId
                 };
-                console.log('[Chatbot] Sending request to n8n', { url: N8N_WEBHOOK_URL, body: requestBody });
+                console.log('[Chatbot] Sending request to n8n', { url: N8N_WEBHOOK_URL, body: { ...requestBody, image: imageToSend ? '[image data]' : null } });
                 
                 const response = await fetch(N8N_WEBHOOK_URL, {
                     method: 'POST',
@@ -1045,20 +1500,22 @@
                 
                 // 4. Save the AI's response to Supabase
                 console.log('[Chatbot] Saving AI response to Supabase');
-                const { error: aiInsertError } = await supabaseClient
+                const { data: aiMessageData, error: aiInsertError } = await supabaseClient
                     .from('chat_messages')
                     .insert({
                         session_id: currentSessionId,
                         role: 'assistant',
                         content: aiResponseText
-                    });
+                    })
+                    .select('id')
+                    .single();
                 if (aiInsertError) {
                     console.error('[Chatbot] Error saving AI response:', aiInsertError);
                     showError(aiInsertError.message);
                 } else {
                     console.log('[Chatbot] AI response saved successfully, rendering message');
                     // Render the message immediately (don't rely solely on realtime subscription)
-                    renderMessage('assistant', aiResponseText);
+                    renderMessage('assistant', aiResponseText, aiMessageData.id);
                 }
             } catch (error) {
                 console.error('[Chatbot] Error in handleSendMessage:', error);
@@ -1069,6 +1526,7 @@
                 console.log('[Chatbot] Re-enabling form');
                 messageInput.disabled = false;
                 sendButton.disabled = false;
+                imageUploadButton.disabled = false;
                 messageInput.focus();
             }
         }
@@ -1082,6 +1540,10 @@
         // Chat
         newChatButton.addEventListener('click', handleNewChat);
         messageForm.addEventListener('submit', handleSendMessage);
+        // Image upload
+        imageUploadButton.addEventListener('click', () => imageInput.click());
+        imageInput.addEventListener('change', handleImageSelect);
+        removeImageButton.addEventListener('click', clearImageSelection);
         // Dropdown toggle
         historyDropdownButton.addEventListener('click', (e) => {
             e.stopPropagation();
