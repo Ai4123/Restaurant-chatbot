@@ -413,6 +413,15 @@
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
             </div>
+            <!-- Access Restriction Notice -->
+<div id="chat-locked-message" class="flex flex-col items-center justify-center h-full text-center space-y-4 p-6 hidden">
+  <h2 class="text-2xl font-semibold text-white">Login Required</h2>
+  <p class="text-gray-300">Please log in to use our Gemini Diner AI chatbot.</p>
+  <button id="chat-login-redirect" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition">
+    Go to Login
+  </button>
+</div>
+
             <!-- Error Toast (now absolute) -->
             <div id="error-toast" class="absolute bottom-4 right-4 bg-red-600 text-white p-4 rounded-lg shadow-lg z-50 hidden transition-opacity duration-300">
                 <span id="error-message"></span>
@@ -605,17 +614,39 @@
         }
         function updateUI(user) {
   currentUser = user;
+  const chatLockedMessage = document.getElementById('chat-locked-message');
+  const chatContainer = document.getElementById('chat-container');
+
   if (user) {
-      chatContainer.classList.remove('hidden');
-      userEmailElement.textContent = user.email;
-      fetchSessions();
-      loadSession(null);
+    // ✅ User is logged in: unlock chatbot
+    chatLockedMessage.classList.add('hidden');
+    chatContainer.classList.remove('hidden');
+    userEmailElement.textContent = user.email;
+    fetchSessions();
+    loadSession(null);
   } else {
-      chatContainer.classList.add('hidden');
-      currentUser = null;
-      currentSessionId = null;
+    // ❌ User not logged in: lock chatbot
+    chatContainer.classList.add('hidden');
+    chatLockedMessage.classList.remove('hidden');
+    currentUser = null;
+    currentSessionId = null;
+
+    // Just in case, clear any messages shown before login
+    messagesContainer.innerHTML = `
+      <div class="flex flex-col items-center justify-center h-full text-center text-gray-400">
+        <p>🔒 Please log in to start chatting.</p>
+      </div>
+    `;
   }
 }
+
+const chatLoginRedirect = document.getElementById('chat-login-redirect');
+chatLoginRedirect.addEventListener('click', () => {
+  toggleChatPopup(false);
+  document.getElementById('site-auth-form').scrollIntoView({ behavior: 'smooth' });
+  alert('Please log in to start chatting!');
+});
+
 
         let sessionTimeoutId;
 
@@ -860,7 +891,19 @@ if (role === 'assistant') {
         }
         // --- EVENT LISTENERS (UI TOGGLES) ---
         // We attach these first so they work even if Supabase config is invalid
-        chatToggleBubble.addEventListener('click', () => toggleChatPopup(true));
+        chatToggleBubble.addEventListener('click', () => {
+  if (!currentUser) {
+    toggleChatPopup(true);
+    document.getElementById('chat-locked-message').classList.remove('hidden');
+    document.getElementById('chat-container').classList.add('hidden');
+  } else {
+    toggleChatPopup(true);
+    document.getElementById('chat-locked-message').classList.add('hidden');
+    document.getElementById('chat-container').classList.remove('hidden');
+  }
+});
+
+
         closeButtons.forEach(btn => {
             btn.addEventListener('click', () => toggleChatPopup(false));
         });
@@ -1536,16 +1579,20 @@ const {data: deleteData, error: deleteError} = await supabaseClient
             toggleDropdown();
         });
         // ========== WEBSITE AUTH LOGIC ==========
+// ========== WEBSITE AUTH LOGIC (FIXED) ==========
 const siteAuthForm = document.getElementById('site-auth-form');
 const siteEmail = document.getElementById('site-email');
 const sitePassword = document.getElementById('site-password');
-const siteLogin = document.getElementById('site-login');
 const siteSignup = document.getElementById('site-signup');
 const welcomeMessage = document.getElementById('welcome-message');
 const usernameDisplay = document.getElementById('username-display');
 const siteLogout = document.getElementById('site-logout');
+const heroWelcome = document.getElementById('hero-welcome');
 
 function showAuthUI(user) {
+  // Safety checks (avoids null.classList errors)
+  if (!siteAuthForm || !welcomeMessage || !usernameDisplay) return;
+
   if (user) {
     siteAuthForm.style.display = 'none';
     welcomeMessage.classList.remove('hidden');
@@ -1554,32 +1601,44 @@ function showAuthUI(user) {
     siteAuthForm.style.display = 'flex';
     welcomeMessage.classList.add('hidden');
   }
-  const heroWelcome = document.getElementById('hero-welcome');
-if (user) {
-  heroWelcome.classList.remove('hidden');
-  heroWelcome.textContent = `Welcome, ${user.email.split('@')[0]}!`;
-} else {
-  heroWelcome.classList.add('hidden');
+
+  // Update hero welcome text safely
+  if (heroWelcome) {
+    if (user) {
+      heroWelcome.classList.remove('hidden');
+      heroWelcome.textContent = `Welcome, ${user.email.split('@')[0]}!`;
+    } else {
+      heroWelcome.classList.add('hidden');
+      heroWelcome.textContent = '';
+    }
+  }
 }
 
+// ✅ Unified function to sync chatbot and site login states
+async function syncUserState() {
+  if (!supabaseClient) return;
+  const { data } = await supabaseClient.auth.getSession();
+  const user = data.session ? data.session.user : null;
+  showAuthUI(user);
+  updateUI(user);
 }
 
 if (supabaseClient) {
-  // Check if user already logged in
-  supabaseClient.auth.getSession().then(({ data }) => {
-    showAuthUI(data.session ? data.session.user : null);
-    updateUI(data.session ? data.session.user : null);
-  });
+  // Run once on load
+  syncUserState();
 
-  // Auth state listener
+  // Keep synced with Supabase auth events
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    showAuthUI(session ? session.user : null);
-    updateUI(session ? session.user : null);
+    const user = session ? session.user : null;
+    showAuthUI(user);
+    updateUI(user);
   });
 }
 
+// --- Login ---
 siteAuthForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!supabaseClient) return alert("Supabase not initialized");
   const { error } = await supabaseClient.auth.signInWithPassword({
     email: siteEmail.value,
     password: sitePassword.value,
@@ -1587,8 +1646,11 @@ siteAuthForm.addEventListener('submit', async (e) => {
   if (error) alert(error.message);
 });
 
+// --- Signup ---
 siteSignup.addEventListener('click', async () => {
-  if (sitePassword.value.length < 6) return alert('Password must be at least 6 characters.');
+  if (!supabaseClient) return alert("Supabase not initialized");
+  if (sitePassword.value.length < 6)
+    return alert('Password must be at least 6 characters.');
   const { error } = await supabaseClient.auth.signUp({
     email: siteEmail.value,
     password: sitePassword.value,
@@ -1597,10 +1659,13 @@ siteSignup.addEventListener('click', async () => {
   else alert('Signup successful! Check your email to verify.');
 });
 
+// --- Logout ---
 siteLogout.addEventListener('click', async () => {
+  if (!supabaseClient) return alert("Supabase not initialized");
   const { error } = await supabaseClient.auth.signOut();
   if (error) alert(error.message);
 });
+
 
         // Delete all button
         deleteAllButton.addEventListener('click', deleteAllSessions);
@@ -1608,9 +1673,17 @@ siteLogout.addEventListener('click', async () => {
         if (supabaseClient) {
             // Only set up the auth listener if initialization was successful
             supabaseClient.auth.onAuthStateChange((event, session) => {
-                updateUI(session ? session.user : null);
-            });
-        }
+                const user = session ? session.user : null;
+    showAuthUI(user);
+    updateUI(user);
+  });
+  // Also check current session on load
+  supabaseClient.auth.getSession().then(({ data }) => {
+    const user = data.session ? data.session.user : null;
+    showAuthUI(user);
+    updateUI(user);
+  });
+}
     </script>
 </body>
 </html>
