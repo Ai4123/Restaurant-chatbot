@@ -178,6 +178,13 @@
       .feedback-container {
           animation: feedback-fade-in 0.4s ease-out 0.2s both;
       }
+      #auth-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(6px);
+}
+
     </style>
     <script>
       /* Custom Tailwind theme for The Gemini Diner */
@@ -212,19 +219,44 @@
           </div>
           <!-- Add Login/Signup or Welcome Message -->
 <div id="auth-section" class="flex items-center space-x-4">
-  <form id="site-auth-form" class="flex space-x-2" style="display:none;">
-    <input type="email" id="site-email" placeholder="Email"
-           class="px-2 py-1 border rounded" required>
-    <input type="password" id="site-password" placeholder="Password"
-           class="px-2 py-1 border rounded" required minlength="6">
-    <button id="site-login" type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">Login</button>
-    <button id="site-signup" type="button" class="bg-gray-600 text-white px-3 py-1 rounded">Sign Up</button>
-  </form>
-
   <div id="welcome-message" class="text-gray-700 font-medium hidden">
     Welcome, <span id="username-display"></span>!
     <button id="site-logout" class="ml-2 bg-red-500 text-white px-2 py-1 rounded text-sm">Logout</button>
   </div>
+</div>
+
+  <!-- ========== WEBSITE LOGIN / SIGNUP POPUP MODAL ========== -->
+<div id="auth-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 hidden">
+  <div class="bg-gray-900 text-gray-100 rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
+    <h2 class="text-2xl font-bold mb-6 text-center">Welcome to The Gemini Diner</h2>
+
+    <form id="site-auth-form" class="space-y-4">
+      <input type="email" id="site-email" placeholder="Email"
+             class="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+             required>
+      <input type="password" id="site-password" placeholder="Password"
+             class="w-full px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+             required minlength="6">
+
+      <div class="flex justify-between items-center">
+        <button id="site-login" type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg transition">
+          Login
+        </button>
+        <button id="site-signup" type="button"
+                class="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-5 py-2 rounded-lg transition">
+          Sign Up
+        </button>
+      </div>
+    </form>
+
+    <p id="auth-message" class="text-sm text-center text-gray-400 mt-4"></p>
+
+    <button id="close-auth-modal"
+            class="absolute top-3 right-3 text-gray-400 hover:text-white transition text-xl">&times;</button>
+  </div>
+</div>
+
 </div>
           <!-- Mobile Menu Button -->
           <div class="md:hidden">
@@ -1578,43 +1610,46 @@ const {data: deleteData, error: deleteError} = await supabaseClient
             e.stopPropagation();
             toggleDropdown();
         });
-        // ========== WEBSITE AUTH LOGIC ==========
-// ========== WEBSITE AUTH LOGIC (FIXED) ==========
+    // ========== WEBSITE AUTH POPUP LOGIC ==========
+const authModal = document.getElementById('auth-modal');
+const closeAuthModal = document.getElementById('close-auth-modal');
 const siteAuthForm = document.getElementById('site-auth-form');
 const siteEmail = document.getElementById('site-email');
 const sitePassword = document.getElementById('site-password');
 const siteSignup = document.getElementById('site-signup');
+const authMessage = document.getElementById('auth-message');
 const welcomeMessage = document.getElementById('welcome-message');
 const usernameDisplay = document.getElementById('username-display');
 const siteLogout = document.getElementById('site-logout');
-const heroWelcome = document.getElementById('hero-welcome');
 
+// --- Show popup when not logged in ---
+function showAuthPopup() {
+  authModal.classList.remove('hidden');
+  document.body.classList.add('overflow-hidden');
+}
+
+// --- Hide popup ---
+function hideAuthPopup() {
+  authModal.classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
+  siteEmail.value = '';
+  sitePassword.value = '';
+  authMessage.textContent = '';
+}
+
+// --- Show/hide UI depending on user ---
 function showAuthUI(user) {
-  // Safety checks (avoids null.classList errors)
-  if (!siteAuthForm || !welcomeMessage || !usernameDisplay) return;
-
   if (user) {
-    siteAuthForm.style.display = 'none';
     welcomeMessage.classList.remove('hidden');
     usernameDisplay.textContent = user.email.split('@')[0];
+    hideAuthPopup();
   } else {
-    siteAuthForm.style.display = 'flex';
     welcomeMessage.classList.add('hidden');
-  }
-
-  // Update hero welcome text safely
-  if (heroWelcome) {
-    if (user) {
-      heroWelcome.classList.remove('hidden');
-      heroWelcome.textContent = `Welcome, ${user.email.split('@')[0]}!`;
-    } else {
-      heroWelcome.classList.add('hidden');
-      heroWelcome.textContent = '';
-    }
+    showAuthPopup();
   }
 }
 
-// ✅ Unified function to sync chatbot and site login states
+// --- Sync user state with Supabase ---
 async function syncUserState() {
   if (!supabaseClient) return;
   const { data } = await supabaseClient.auth.getSession();
@@ -1624,10 +1659,10 @@ async function syncUserState() {
 }
 
 if (supabaseClient) {
-  // Run once on load
+  // Initial check
   syncUserState();
 
-  // Keep synced with Supabase auth events
+  // React to auth changes
   supabaseClient.auth.onAuthStateChange((event, session) => {
     const user = session ? session.user : null;
     showAuthUI(user);
@@ -1635,67 +1670,59 @@ if (supabaseClient) {
   });
 }
 
-// --- Login ---
+// --- Login handler ---
 siteAuthForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!supabaseClient) return alert("Supabase not initialized");
   const { error } = await supabaseClient.auth.signInWithPassword({
     email: siteEmail.value,
     password: sitePassword.value,
   });
-  if (error) alert(error.message);
+  if (error) {
+    authMessage.textContent = error.message;
+    authMessage.classList.add('text-red-400');
+  } else {
+    authMessage.textContent = "Login successful!";
+    authMessage.classList.add('text-green-400');
+  }
 });
 
-// --- Signup ---
+// --- Signup handler ---
 siteSignup.addEventListener('click', async () => {
-  if (!supabaseClient) return alert("Supabase not initialized");
   if (sitePassword.value.length < 6)
-    return alert('Password must be at least 6 characters.');
+    return (authMessage.textContent = "Password must be at least 6 characters.");
   const { error } = await supabaseClient.auth.signUp({
     email: siteEmail.value,
     password: sitePassword.value,
   });
-  if (error) alert(error.message);
-  else alert('Signup successful! Check your email to verify.');
+  if (error) authMessage.textContent = error.message;
+  else authMessage.textContent = "Signup successful! Check your email to verify.";
 });
 
-// --- Logout ---
-// --- Safe Logout (handles 403 Forbidden + missing session cases) ---
+// --- Logout handler (safe) ---
 siteLogout.addEventListener('click', async () => {
-  if (!supabaseClient) return alert("Supabase not initialized");
-
   try {
-    // Try to get the current session first
     const { data, error: sessionError } = await supabaseClient.auth.getSession();
-    if (sessionError) {
-      console.warn("Error checking session before logout:", sessionError.message);
-    }
-
     const session = data?.session;
-
     if (!session) {
-      console.warn("⚠️ No active session found — forcing local signout cleanup.");
-      await supabaseClient.auth.signOut({ scope: 'local' }); // clear browser cache
+      await supabaseClient.auth.signOut({ scope: 'local' });
       showAuthUI(null);
       updateUI(null);
       return;
     }
-
-    // Normal logout if session is active
     const { error } = await supabaseClient.auth.signOut();
-    if (error) {
-      console.error("Logout failed:", error.message);
-      alert("Logout failed: " + error.message);
-    } else {
-      console.log("✅ Logged out successfully");
+    if (error) alert("Logout failed: " + error.message);
+    else {
       showAuthUI(null);
       updateUI(null);
     }
   } catch (err) {
-    console.error("Logout exception:", err);
     alert("Unexpected logout error: " + err.message);
   }
 });
+
+// --- Close button ---
+closeAuthModal.addEventListener('click', hideAuthPopup);
+
 
 
 
