@@ -1577,7 +1577,7 @@ const {data: deleteData, error: deleteError} = await supabaseClient
                 } else {
                     console.log('[Chatbot] AI response saved successfully, rendering message');
                     // Render the message immediately (don't rely solely on realtime subscription)
-                    renderMessage('assistant', aiResponseText, aiMessageData.id);
+                  
                 }
             } catch (error) {
                 console.error('[Chatbot] Error in handleSendMessage:', error);
