@@ -185,6 +185,7 @@
   backdrop-filter: blur(6px);
 }
 
+
     </style>
     <script>
       /* Custom Tailwind theme for The Gemini Diner */
@@ -474,7 +475,7 @@
                                     </svg>
                                     <span>New Chat</span>
                                 </button>
-                                <button id="signout-button" class="text-gray-400 hover:text-white p-1.5" title="Sign Out">
+                                <button id="signout-button" class=" hidden text-gray-400 hover:text-white p-1.5" title="Sign Out">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                     </svg>
@@ -504,8 +505,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-2 text-xs text-gray-400">
-                            <span id="user-email" class="truncate" title="User Email"></span>
+                        <div class="mt-2 text-sm text-blue-300 font-medium">
+                            <span id="user-welcome" class="truncate">Welcome, <span id="user-name"></span>!</span>
                         </div>
                     </div>
                     <!-- Messages Container -->
@@ -653,10 +654,11 @@
     // ✅ User is logged in: unlock chatbot
     chatLockedMessage.classList.add('hidden');
     chatContainer.classList.remove('hidden');
-    userEmailElement.textContent = user.email;
+    const userName = user.email.split('@')[0]; // Extract username from email
+    document.getElementById('user-name').textContent = userName;
     fetchSessions();
     loadSession(null);
-  } else {
+     } else {
     // ❌ User not logged in: lock chatbot
     chatContainer.classList.add('hidden');
     chatLockedMessage.classList.remove('hidden');
@@ -1187,45 +1189,60 @@ if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
                 )
                 .subscribe();
         }
-        async function handleNewChat() {
-            console.log('[Chatbot] handleNewChat called');
-            if (!currentUser || !supabaseClient) {
-                console.warn('[Chatbot] Cannot create new chat - missing user or client');
-                return;
-            }
-            // Clear any selected image
-            clearImageSelection();
-            showLoading(true);
-            // 1. Create a new session in the database
-            console.log('[Chatbot] Creating new chat session');
-            const {data, error: sessionError } = await supabaseClient
-                .from('chat_sessions')
-                .insert({ user_id: currentUser.id })
-                .select('id') // Ask Supabase to return the 'id' of the new row
-                .single(); // We only expect one row back
-            showLoading(false);
-            if (error) {
-                console.error('[Chatbot] Error creating new session:', error);
-                showError(error.message);
-                return;
-            }
-            console.log('[Chatbot] New session created', { sessionId: data.id });
-            // 2. Refresh the session list
-            await fetchSessions();
-            // 3. Load the new, empty chat session
-            loadSession(data.id);
-            // 4. Close dropdown
-            closeDropdown();
-
-            const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString(); // 15 min from now
-const {data: deleteData, error: deleteError} = await supabaseClient
-  .from('chat_sessions')
-  .insert({ user_id: currentUser.id, expires_at: expiresAt })
-  .select('id')
-  .single();
-
-        }
         
+        async function handleNewChat() {
+    console.log('[Chatbot] handleNewChat called');
+    if (!currentUser || !supabaseClient) {
+        console.warn('[Chatbot] Cannot create new chat - missing user or client');
+        return;
+    }
+    
+    // Clear any selected image
+    clearImageSelection();
+    
+    // Clear messages immediately for instant feedback
+    messagesContainer.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-500"><p>Starting new chat...</p></div>';
+    
+    showLoading(true);
+    
+    // 1. Create a new session in the database with expiration time
+    console.log('[Chatbot] Creating new chat session');
+    const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString(); // 3 min from now
+    
+    const {data, error} = await supabaseClient
+        .from('chat_sessions')
+        .insert({ 
+            user_id: currentUser.id,
+            expires_at: expiresAt
+        })
+        .select('id')
+        .single();
+    
+    showLoading(false);
+    
+    if (error) {
+        console.error('[Chatbot] Error creating new session:', error);
+        showError(error.message);
+        return;
+    }
+    
+    console.log('[Chatbot] New session created', { sessionId: data.id });
+    
+    // 2. Refresh the session list
+    await fetchSessions();
+    
+    // 3. Load the new, empty chat session
+    await loadSession(data.id);
+    
+    // 4. Clear input and reset controls
+    messageInput.value = '';
+    messageInput.focus();
+    setInputDisabled(false);
+    resetSessionTimeout();
+    
+    // 5. Close dropdown
+    closeDropdown();
+}
 
         async function deleteSession(sessionId) {
             if (!currentUser || !supabaseClient || !sessionId) return;
@@ -1659,15 +1676,37 @@ async function syncUserState() {
 }
 
 if (supabaseClient) {
-  // Initial check
-  syncUserState();
-
-  // React to auth changes
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    const user = session ? session.user : null;
-    showAuthUI(user);
-    updateUI(user);
-  });
+    // Listen for auth state changes
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        console.log('[Auth] State change:', event);
+        
+        const user = session ? session.user : null;
+        showAuthUI(user);
+        updateUI(user);
+        
+        // Auto-close popup and refresh on email verification
+        if (event === 'SIGNED_IN' && user) {
+            hideAuthPopup();
+            authMessage.textContent = 'Login successful!';
+            authMessage.classList.remove('text-red-400');
+            authMessage.classList.add('text-green-400');
+        }
+        
+        // Handle email verification completion
+        if (event === 'USER_UPDATED' && user?.email_confirmed_at) {
+            hideAuthPopup();
+            authMessage.textContent = 'Email verified! Logging you in...';
+            authMessage.classList.remove('text-red-400');
+            authMessage.classList.add('text-green-400');
+        }
+    });
+    
+    // Also check current session on load
+    supabaseClient.auth.getSession().then(({ data }) => {
+        const user = data.session ? data.session.user : null;
+        showAuthUI(user);
+        updateUI(user);
+    });
 }
 
 // --- Login handler ---
@@ -1688,14 +1727,41 @@ siteAuthForm.addEventListener('submit', async (e) => {
 
 // --- Signup handler ---
 siteSignup.addEventListener('click', async () => {
-  if (sitePassword.value.length < 6)
-    return (authMessage.textContent = "Password must be at least 6 characters.");
-  const { error } = await supabaseClient.auth.signUp({
+  if (sitePassword.value.length < 6) {
+    authMessage.textContent = "Password must be at least 6 characters.";
+    authMessage.classList.remove('text-green-400');
+    authMessage.classList.add('text-red-400');
+    return;
+  }
+  
+  const { data, error } = await supabaseClient.auth.signUp({
     email: siteEmail.value,
     password: sitePassword.value,
   });
-  if (error) authMessage.textContent = error.message;
-  else authMessage.textContent = "Signup successful! Check your email to verify.";
+  
+  if (error) {
+    authMessage.textContent = error.message;
+    authMessage.classList.remove('text-green-400');
+    authMessage.classList.add('text-red-400');
+  } else {
+    // Check if email confirmation is disabled
+    if (data.session) {
+      // User is logged in immediately (email confirmation disabled)
+      authMessage.textContent = "Signup successful! You're now logged in.";
+      authMessage.classList.remove('text-red-400');
+      authMessage.classList.add('text-green-400');
+      setTimeout(() => hideAuthPopup(), 1500);
+    } else {
+      // Email confirmation is required
+      authMessage.textContent = "Signup successful! Check your email to verify.";
+      authMessage.classList.remove('text-red-400');
+      authMessage.classList.add('text-green-400');
+    }
+    
+    // Clear the form
+    siteEmail.value = '';
+    sitePassword.value = '';
+  }
 });
 
 // --- Logout handler (safe) ---
@@ -1722,8 +1788,6 @@ siteLogout.addEventListener('click', async () => {
 
 // --- Close button ---
 closeAuthModal.addEventListener('click', hideAuthPopup);
-
-
 
 
         // Delete all button
