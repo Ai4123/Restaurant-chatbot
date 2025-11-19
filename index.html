@@ -1642,8 +1642,6 @@ if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
             imagePreviewContainer.classList.add('hidden');
         }
 
-
-
         async function deleteAllSessions() {
             if (!currentUser || !supabaseClient) return;
             if (!confirm('Are you sure you want to delete ALL chats? This action cannot be undone.')) {
@@ -1705,6 +1703,97 @@ if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
                 closeDropdown();
             }
         });
+
+        // --- AUTO-RESOLVE TICKET LOGIC (PLACE THIS OUTSIDE handleSendMessage) ---
+
+const RESOLUTION_KEYWORDS = [
+    'thank', 'thanks', 'thankyou', 'great', 'perfect', 'excellent', 'awesome',
+    'wonderful', 'amazing', 'brilliant', 'solved', 'fixed', 'resolved',
+    'working', 'works', 'done', 'finished', 'helped', 'help', 'appreciate',
+    'good', 'thanks!', 'thank you', 'thx', 'ty', 'tq', 'ok thanks'
+];
+
+const NEGATIVE_KEYWORDS = [
+    'still', 'not', "don't", 'doesnt', 'issue', 'problem', 'broken', 'error',
+    'fail', 'wrong', 'need', 'stuck', 'please', 'urgent'
+];
+
+function checkForResolutionKeywords(messageText) {
+    if (!messageText) return false;
+    
+    const lowerText = messageText.toLowerCase().trim();
+    console.log('[Tickets] Checking resolution keywords for:', lowerText);
+    
+    const hasPositive = RESOLUTION_KEYWORDS.some(keyword => lowerText.includes(keyword));
+    const hasNegative = NEGATIVE_KEYWORDS.some(keyword => lowerText.includes(keyword));
+    
+    console.log('[Tickets] Has positive:', hasPositive, '| Has negative:', hasNegative);
+    
+    return hasPositive && !hasNegative;
+}
+
+async function autoResolveTicket(sessionId, messageText) {
+    console.log('[Tickets] autoResolveTicket called', { sessionId, messageText });
+    
+    if (!supabaseClient || !currentUser || !sessionId) {
+        console.warn('[Tickets] Missing required data');
+        return;
+    }
+    
+    try {
+        // Check if keywords indicate resolution
+        if (!checkForResolutionKeywords(messageText)) {
+            console.log('[Tickets] No resolution keywords detected');
+            return;
+        }
+        
+        console.log('[Tickets] Resolution keywords detected - finding ticket...');
+        
+        // Use maybeSingle() instead of single() to avoid 406 errors
+        const { data: ticket, error: fetchError } = await supabaseClient
+            .from('tickets')
+            .select('id, status')
+            .eq('session_id', sessionId)
+            .eq('status', 'open')
+            .maybeSingle();
+        
+        if (fetchError) {
+            console.error('[Tickets] Error fetching ticket:', fetchError);
+            return;
+        }
+        
+        if (!ticket) {
+            console.log('[Tickets] No open ticket found for this session');
+            return;
+        }
+        
+        console.log('[Tickets] Found open ticket, updating...', ticket.id);
+        
+        // Update ticket status
+        const { data: updatedTicket, error: updateError } = await supabaseClient
+            .from('tickets')
+            .update({ status: 'resolved' })
+            .eq('id', ticket.id)
+            .select();
+        
+        if (updateError) {
+            console.error('[Tickets] Error updating ticket:', updateError);
+            return;
+        }
+        
+        console.log('[Tickets] ✅ Ticket resolved successfully:', updatedTicket);
+        showError('✅ Your ticket has been marked as resolved!');
+        
+        // Refresh tickets if modal is open
+        if (ticketsModal && !ticketsModal.classList.contains('hidden')) {
+            await loadTickets();
+        }
+        
+    } catch (error) {
+        console.error('[Tickets] Exception:', error);
+    }
+}
+
         async function handleSendMessage(e) {
             e.preventDefault();
             const messageText = messageInput.value.trim();
@@ -1813,7 +1902,8 @@ if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
             // it manually first for instant UI feedback.
             console.log('[Chatbot] Rendering user message');
             renderMessage('user', messageText, null, imageToSend);
-            
+            // Auto-resolve if user says "thanks", "great", etc.
+            await autoResolveTicket(currentSessionId, messageText);
             // Clear image selection
             clearImageSelection();
             
@@ -1834,7 +1924,8 @@ if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
                 return;
             }
             console.log('[Chatbot] User message saved successfully');
-            
+
+
             // 2. Get the user's auth token
             const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
             if (sessionError || !session) {
@@ -1920,6 +2011,7 @@ if (sessionData?.expires_at && new Date(sessionData.expires_at) < new Date()) {
                 messageInput.focus();
             }
         }
+
         // --- Event Listeners Setup ---
         // Chat Popup Toggle
         // MOVED TO TOP
